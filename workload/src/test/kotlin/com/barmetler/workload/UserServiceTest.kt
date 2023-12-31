@@ -10,6 +10,8 @@ import com.barmetler.workload.models.HumanName
 import com.barmetler.workload.models.PersonalDetails
 import com.barmetler.workload.models.User
 import com.barmetler.workload.services.UserService
+import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -49,7 +51,8 @@ class UserServiceTest @Autowired constructor(private val sut: UserService) {
                                 HumanNameChangesetDto(
                                     firstName = "Maxi".some(),
                                     lastName = "Barmetler".some(),
-                                )
+                                    middleNames = listOf("Erich")
+                                ),
                         ),
                 ),
             )
@@ -58,14 +61,53 @@ class UserServiceTest @Autowired constructor(private val sut: UserService) {
         val expectedUser =
             User().apply {
                 id = user.id
+                this.email = email
                 personalDetails =
-                    PersonalDetails(name = HumanName(firstName = "Maxi", lastName = "Barmetler"))
+                    PersonalDetails(
+                        name =
+                            HumanName(
+                                firstName = "Maxi",
+                                lastName = "Barmetler",
+                                middleNames = listOf("Erich"),
+                            )
+                    )
             }
         assertEquals(expectedUser, updatedUser)
+
+        val dateOfBirth =
+            LocalDateTime.of(2000, 4, 2, 15, 10).run {
+                atOffset(ZoneId.of("Europe/Berlin").rules.getOffset(this))
+            }
+        sut.updateUser(
+            user.id,
+            UserChangesetDto(
+                personalDetails =
+                    PersonalDetailsChangesetDto(
+                        name = HumanNameChangesetDto(middleNames = emptyList()),
+                        dateOfBirth = dateOfBirth.some(),
+                    ),
+            ),
+        )
+        val expectedUser2 =
+            User().apply {
+                id = user.id
+                this.email = email
+                personalDetails =
+                    PersonalDetails(
+                        name =
+                            HumanName(
+                                firstName = "Maxi",
+                                lastName = "Barmetler",
+                                middleNames = emptyList(),
+                            ),
+                        dateOfBirth = dateOfBirth,
+                    )
+            }
+        assertEquals(expectedUser2, sut.getUser(user.id).bind())
     }
 }
 
 inline fun <Error> assertRight(block: Raise<Error>.() -> Unit) {
     val result = either(block)
-    assert(result.isRight()) { result.leftOrNull().toString() }
+    assert(result.isRight()) { result.leftOrNull() ?: Unit }
 }

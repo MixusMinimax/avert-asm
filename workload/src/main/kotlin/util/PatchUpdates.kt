@@ -13,6 +13,7 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.valueParameters
+import kotlin.reflect.jvm.isAccessible
 
 inline fun <reified I : Any, reified C : Any> patchInstance(
     instance: I,
@@ -40,6 +41,7 @@ fun <I : Any, C : Any> patchInstance(
                     null
                 }
             }) {
+        instanceField.isAccessible = true
         when (val fieldWrapperKind = field.getFieldWrapperKind(instanceField)) {
             FieldWrapperKind.OPTION,
             FieldWrapperKind.VALUE -> {
@@ -120,5 +122,6 @@ private fun <T, V : Any> KMutableProperty1<T, *>.trySet(instance: T, value: V?) 
         } else {
             return
         }
+    castSelf.isAccessible = true
     castSelf.set(instance, value)
 }
