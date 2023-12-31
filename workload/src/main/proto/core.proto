@@ -14,14 +14,28 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+syntax = "proto3";
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
+package com.barmetler.core;
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoClass(
-    val protoClass: KClass<*>,
-    val converter: KClass<out Converter<*, *>> = Converter::class,
-)
+option java_multiple_files = true;
+option java_outer_classname = "CoreProto";
+option java_package = "com.barmetler.proto.core";
+
+message Date {
+  int32 year = 1;
+  int32 month = 2;
+  int32 day = 3;
+}
+
+message Time {
+  int32 hour = 1;
+  int32 minute = 2;
+  int32 second = 3;
+  int32 millisecond = 4;
+}
+
+message DateTime {
+  Date date = 1;
+  Time time = 2;
+}

@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+package com.barmetler.workload.models
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
+import com.barmetler.avert.annotation.ProtoField
+import java.util.*
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoClass(
-    val protoClass: KClass<*>,
-    val converter: KClass<out Converter<*, *>> = Converter::class,
-)
+class HumanName(@ProtoField var id: UUID? = null)

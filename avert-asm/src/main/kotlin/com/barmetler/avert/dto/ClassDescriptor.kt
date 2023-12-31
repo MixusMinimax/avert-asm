@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+package com.barmetler.avert.dto
 
 import com.barmetler.avert.api.Converter
 import kotlin.reflect.KClass
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoClass(
+data class ClassDescriptor(
+    val domainClass: KClass<*>,
     val protoClass: KClass<*>,
-    val converter: KClass<out Converter<*, *>> = Converter::class,
+    val customConverter: KClass<out Converter<*, *>>?,
+    val fields: List<FieldDescriptor>,
 )

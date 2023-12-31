@@ -19,9 +19,9 @@ package com.barmetler.avert.annotation
 import com.barmetler.avert.api.Converter
 import kotlin.reflect.KClass
 
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoClass(
-    val protoClass: KClass<*>,
+annotation class ProtoField(
+    val name: String = "",
     val converter: KClass<out Converter<*, *>> = Converter::class,
 )

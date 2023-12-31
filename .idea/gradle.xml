@@ -9,6 +9,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/avert-asm" />
+            <option value="$PROJECT_DIR$/workload" />
           </set>
         </option>
       </GradleProjectSettings>

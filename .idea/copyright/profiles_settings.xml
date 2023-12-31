@@ -3,5 +3,6 @@
     <module2copyright>
       <element module="barmetler.com" copyright="Barmetler Apache 2.0" />
     </module2copyright>
+    <LanguageOptions name="__TEMPLATE__" />
   </settings>
 </component>

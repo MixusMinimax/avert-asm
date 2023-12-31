@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+syntax = "proto3";
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
+package com.barmetler.user;
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoClass(
-    val protoClass: KClass<*>,
-    val converter: KClass<out Converter<*, *>> = Converter::class,
-)
+import "person.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "UserProto";
+option java_package = "com.barmetler.proto.user";
+
+message User {
+  string id = 1;
+  string email = 2;
+  string password_hash = 3;
+  person.PersonalDetails personal_details = 4;
+}

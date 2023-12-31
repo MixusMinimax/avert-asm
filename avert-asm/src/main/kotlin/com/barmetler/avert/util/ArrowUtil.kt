@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+package com.barmetler.avert.util
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
+import arrow.core.raise.Raise
+import arrow.core.toOption
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoClass(
-    val protoClass: KClass<*>,
-    val converter: KClass<out Converter<*, *>> = Converter::class,
-)
+context(Raise<Error>)
+inline fun <Error, Result> Sequence<Result>.firstOrRaise(error: () -> Error): Result =
+    firstOrNull().toOption().toEither(error).bind()
+
+context(Raise<Error>)
+inline fun <Error, Result> Iterable<Result>.firstOrRaise(error: () -> Error): Result =
+    firstOrNull().toOption().toEither(error).bind()
