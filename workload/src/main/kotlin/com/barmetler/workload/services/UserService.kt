@@ -54,8 +54,8 @@ class UserService(private val userRepository: UserRepository) {
         val user = getUser(id).bind()
         recover(
             { patchInstance(user, changeset).bind() },
-            { _: ApplicationError -> raise(CrudError.UpdateFailed("")) },
-            { exc -> raise(CrudError.UpdateFailed(exc.message ?: "")) }
+            { _: ApplicationError -> raise(CrudError.UpdateFailed("patch failed")) },
+            { exc -> raise(CrudError.UpdateFailed(exc.message ?: "$exc")) }
         )
         user
     }

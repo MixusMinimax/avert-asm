@@ -2,6 +2,13 @@ package com.barmetler.workload
 
 import arrow.core.raise.Raise
 import arrow.core.raise.either
+import arrow.core.some
+import com.barmetler.workload.dto.HumanNameChangesetDto
+import com.barmetler.workload.dto.PersonalDetailsChangesetDto
+import com.barmetler.workload.dto.UserChangesetDto
+import com.barmetler.workload.models.HumanName
+import com.barmetler.workload.models.PersonalDetails
+import com.barmetler.workload.models.User
 import com.barmetler.workload.services.UserService
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
@@ -28,8 +35,37 @@ class UserServiceTest @Autowired constructor(private val sut: UserService) {
         assertEquals(email, createResult.email)
         assertEquals(email, getResult.email)
     }
+
+    @Test
+    fun updateUser() = assertRight {
+        val email = "updateUser@example.com"
+        val user = sut.createUser(email).bind()
+        sut.updateUser(
+                user.id,
+                UserChangesetDto(
+                    personalDetails =
+                        PersonalDetailsChangesetDto(
+                            name =
+                                HumanNameChangesetDto(
+                                    firstName = "Maxi".some(),
+                                    lastName = "Barmetler".some(),
+                                )
+                        ),
+                ),
+            )
+            .bind()
+        val updatedUser = sut.getUser(user.id).bind()
+        val expectedUser =
+            User().apply {
+                id = user.id
+                personalDetails =
+                    PersonalDetails(name = HumanName(firstName = "Maxi", lastName = "Barmetler"))
+            }
+        assertEquals(expectedUser, updatedUser)
+    }
 }
 
-fun <Error> assertRight(block: Raise<Error>.() -> Unit) {
-    assert(either(block).isRight())
+inline fun <Error> assertRight(block: Raise<Error>.() -> Unit) {
+    val result = either(block)
+    assert(result.isRight()) { result.leftOrNull().toString() }
 }
