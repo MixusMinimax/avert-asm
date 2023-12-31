@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package com.barmetler.workload.repositories
+package com.barmetler.workload.dto
 
-import com.barmetler.workload.models.User
-import java.util.*
-import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.stereotype.Repository
+import arrow.core.Option
 
-@Repository
-interface UserRepository : JpaRepository<User, UUID> {
-    fun findByEmail(email: String): User?
-}
+data class HumanNameChangesetDto(
+    val firstName: Option<String>? = null,
+    val lastName: Option<String>? = null,
+    val middleNames: List<String>? = null,
+)

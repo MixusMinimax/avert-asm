@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-package com.barmetler.workload.repositories
+package com.barmetler.workload.errors
 
-import com.barmetler.workload.models.User
-import java.util.*
-import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.stereotype.Repository
+sealed interface CrudError {
+    data class AlreadyExistsError<Id>(val id: Id) : CrudError
 
-@Repository
-interface UserRepository : JpaRepository<User, UUID> {
-    fun findByEmail(email: String): User?
+    data class NotFoundError<Id>(val id: Id) : CrudError
 }
