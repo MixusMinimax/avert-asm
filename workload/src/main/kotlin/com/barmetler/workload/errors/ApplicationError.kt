@@ -16,8 +16,4 @@
 
 package com.barmetler.workload.errors
 
-sealed interface CrudError : ApplicationError {
-    data class AlreadyExistsError<Id>(val id: Id) : CrudError
-
-    data class NotFoundError<Id>(val id: Id) : CrudError
-}
+sealed interface ApplicationError
