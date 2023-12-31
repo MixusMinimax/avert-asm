@@ -18,14 +18,17 @@ package com.barmetler.workload.services
 
 import arrow.core.Either
 import arrow.core.raise.either
+import arrow.core.raise.recover
 import com.barmetler.workload.dto.UserChangesetDto
+import com.barmetler.workload.errors.ApplicationError
 import com.barmetler.workload.errors.CrudError
 import com.barmetler.workload.models.User
 import com.barmetler.workload.repositories.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.transaction.Transactional
 import java.util.*
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import util.patchInstance
 
 @Service
 class UserService(private val userRepository: UserRepository) {
@@ -38,17 +41,32 @@ class UserService(private val userRepository: UserRepository) {
         User().apply { this.email = email }.save()
     }
 
+    @Transactional(readOnly = true)
+    fun getUser(id: UUID): Either<CrudError.NotFoundError<UUID>, User> = either {
+        userRepository.findById(id).orElseGet { raise(CrudError.NotFoundError(id)) }
+    }
+
     @Transactional
-    fun updateUser(id: UUID, changeset: UserChangesetDto): Either<CrudError, User> = either {
+    fun updateUser(
+        id: UUID,
+        changeset: UserChangesetDto,
+    ): Either<CrudError, User> = either {
         val user = getUser(id).bind()
-        TODO()
+        recover(
+            { patchInstance(user, changeset).bind() },
+            { _: ApplicationError -> raise(CrudError.UpdateFailed("")) },
+            { exc -> raise(CrudError.UpdateFailed(exc.message ?: "")) }
+        )
+        user
+    }
+
+    @Transactional
+    fun deleteUser(id: UUID): Either<CrudError, Unit> = either {
+        val user = getUser(id).bind()
+        userRepository.delete(user)
     }
 
     private fun User.save() = userRepository.save(this)
-
-    private fun getUser(id: UUID): Either<CrudError.NotFoundError<UUID>, User> = either {
-        userRepository.findById(id).orElseGet { raise(CrudError.NotFoundError(id)) }
-    }
 
     companion object {
         private val logger = KotlinLogging.logger {}
