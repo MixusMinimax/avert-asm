@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+package com.barmetler.workload.models
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
+import com.barmetler.avert.annotation.ProtoClass
+import com.barmetler.avert.annotation.ProtoField
+import com.barmetler.proto.person.PersonalDetails
+import jakarta.persistence.Embeddable
+import java.time.OffsetDateTime
 
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoField(
-    val name: String = "",
-    val converter: KClass<out Converter<*, *>> = Converter::class,
+@Embeddable
+@ProtoClass(protoClass = PersonalDetails::class)
+class PersonalDetails
+@JvmOverloads
+constructor(
+    @ProtoField var name: HumanName? = null,
+    @ProtoField var dateOfBirth: OffsetDateTime? = null,
 )

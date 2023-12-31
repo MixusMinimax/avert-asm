@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+package com.barmetler.workload.repositories
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
+import com.barmetler.workload.models.User
+import java.util.*
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoField(
-    val name: String = "",
-    val converter: KClass<out Converter<*, *>> = Converter::class,
-)
+@Repository interface UserRepository : JpaRepository<User, UUID>

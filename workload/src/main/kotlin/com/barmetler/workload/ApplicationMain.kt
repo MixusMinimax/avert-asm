@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.annotation
+package com.barmetler.workload
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.domain.EntityScan
+import org.springframework.boot.runApplication
 
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ProtoField(
-    val name: String = "",
-    val converter: KClass<out Converter<*, *>> = Converter::class,
-)
+@SpringBootApplication @EntityScan("com.barmetler.workload.models") class ApplicationMain
+
+fun main(args: Array<String>) {
+    runApplication<ApplicationMain>(*args)
+}

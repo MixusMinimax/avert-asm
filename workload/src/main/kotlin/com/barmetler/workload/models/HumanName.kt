@@ -16,7 +16,18 @@
 
 package com.barmetler.workload.models
 
+import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.annotation.ProtoField
-import java.util.*
+import com.barmetler.proto.person.HumanName
+import jakarta.persistence.ElementCollection
+import jakarta.persistence.Embeddable
 
-class HumanName(@ProtoField var id: UUID? = null)
+@Embeddable
+@ProtoClass(protoClass = HumanName::class)
+class HumanName
+@JvmOverloads
+constructor(
+    @ProtoField var firstName: String? = null,
+    @ProtoField var lastName: String? = null,
+    @ElementCollection @ProtoField var middleNames: List<String>? = null,
+)
