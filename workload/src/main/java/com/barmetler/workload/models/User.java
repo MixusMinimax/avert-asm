@@ -18,10 +18,7 @@ package com.barmetler.workload.models;
 
 import com.barmetler.avert.annotation.ProtoClass;
 import com.barmetler.avert.annotation.ProtoField;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -37,6 +34,7 @@ import java.util.UUID;
 @ToString
 @RequiredArgsConstructor
 @Entity
+@Table(name = "@user")
 @ProtoClass(protoClass = com.barmetler.proto.user.User.class)
 public class User {
     @Id
