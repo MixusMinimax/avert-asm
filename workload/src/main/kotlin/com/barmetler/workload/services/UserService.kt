@@ -24,11 +24,11 @@ import com.barmetler.workload.errors.ApplicationError
 import com.barmetler.workload.errors.CrudError
 import com.barmetler.workload.models.User
 import com.barmetler.workload.repositories.UserRepository
+import com.barmetler.workload.util.patchInstance
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import util.patchInstance
 
 @Service
 class UserService(private val userRepository: UserRepository) {

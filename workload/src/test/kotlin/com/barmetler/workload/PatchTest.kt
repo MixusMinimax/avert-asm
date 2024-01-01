@@ -3,10 +3,10 @@ package com.barmetler.workload
 import arrow.core.None
 import arrow.core.Option
 import arrow.core.some
+import com.barmetler.workload.util.patchInstance
 import java.util.*
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import util.patchInstance
 
 class PatchTest {
 
