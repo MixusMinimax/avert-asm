@@ -24,7 +24,7 @@ import jakarta.persistence.Embeddable
 
 @Embeddable
 @ProtoClass(protoClass = HumanName::class)
-class HumanName
+data class HumanName
 @JvmOverloads
 constructor(
     @ProtoField var firstName: String? = null,
