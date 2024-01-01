@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.api
+package com.barmetler.avert.util
 
-import kotlin.reflect.KClass
+import com.barmetler.avert.api.Converter
+import com.barmetler.avert.api.ConverterContext
 
-interface ConverterContext {
-    /** get or create the converter for this specific pair of types. */
-    fun <Domain : Any, Proto : Any> getConverter(
-        domainClass: KClass<Domain>,
-        protoClass: KClass<Proto>
-    ): Converter<Domain, Proto>
-}
+/** @see ConverterContext.getConverter */
+inline fun <reified Domain : Any, reified Proto : Any> ConverterContext.getConverter():
+    Converter<Domain, Proto> = getConverter(Domain::class, Proto::class)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import arrow.core.raise.Raise
 import arrow.core.toOption
 
 context(Raise<Error>)
-inline fun <Error, Result> Sequence<Result>.firstOrRaise(error: () -> Error): Result =
+internal inline fun <Error, Result> Sequence<Result>.firstOrRaise(error: () -> Error): Result =
     firstOrNull().toOption().toEither(error).bind()
 
 context(Raise<Error>)
-inline fun <Error, Result> Iterable<Result>.firstOrRaise(error: () -> Error): Result =
+internal inline fun <Error, Result> Iterable<Result>.firstOrRaise(error: () -> Error): Result =
     firstOrNull().toOption().toEither(error).bind()
