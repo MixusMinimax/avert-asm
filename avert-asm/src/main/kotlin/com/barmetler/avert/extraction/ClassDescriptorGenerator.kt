@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import com.barmetler.avert.util.firstOrRaise
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
 import kotlin.reflect.KClass
+import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.memberProperties
 
 interface ClassDescriptorGenerator {
@@ -54,10 +55,14 @@ constructor(
                 ExtractionError.AnnotationMissing
             }
 
-        val fields = domainClass.memberProperties
+        val fields =
+            domainClass.memberProperties.map {
+                Triple(it, it.getter, (it as? KMutableProperty<*>)?.setter)
+            }
 
-        logger.debug {
-            "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields"
+        logger.warn {
+            "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields\n" +
+                "$fields"
         }
 
         TODO()

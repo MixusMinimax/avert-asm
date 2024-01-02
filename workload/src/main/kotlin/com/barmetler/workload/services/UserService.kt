@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ class UserService(private val userRepository: UserRepository) {
     }
 
     @Transactional
-    fun deleteUser(id: UUID): Either<CrudError, Unit> = either {
+    fun deleteUser(id: UUID): Either<CrudError.NotFoundError<UUID>, Unit> = either {
         val user = getUser(id).bind()
         userRepository.delete(user)
     }

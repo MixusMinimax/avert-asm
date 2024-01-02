@@ -79,15 +79,16 @@ class UserServiceTest @Autowired constructor(private val sut: UserService) {
                 atOffset(ZoneId.of("Europe/Berlin").rules.getOffset(this))
             }
         sut.updateUser(
-            user.id,
-            UserChangesetDto(
-                personalDetails =
-                    PersonalDetailsChangesetDto(
-                        name = HumanNameChangesetDto(middleNames = emptyList()),
-                        dateOfBirth = dateOfBirth.some(),
-                    ),
-            ),
-        )
+                user.id,
+                UserChangesetDto(
+                    personalDetails =
+                        PersonalDetailsChangesetDto(
+                            name = HumanNameChangesetDto(middleNames = emptyList()),
+                            dateOfBirth = dateOfBirth.some(),
+                        ),
+                ),
+            )
+            .bind()
         val expectedUser2 =
             User().apply {
                 id = user.id
