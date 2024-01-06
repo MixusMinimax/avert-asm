@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,6 @@ import kotlin.reflect.KClass
 data class ClassDescriptor(
     val domainClass: KClass<*>,
     val protoClass: KClass<*>,
-    val customConverter: KClass<out Converter<*, *>>?,
-    val fields: List<FieldDescriptor>,
+    val customConverter: KClass<out Converter<*, *>>? = null,
+    val fields: List<FieldDescriptor> = emptyList(),
 )

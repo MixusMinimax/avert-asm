@@ -59,19 +59,19 @@ constructor(
                 ExtractionError.AnnotationMissing
             }
 
+        val protoClass = annotation.protoClass
+
+        val memberFunctions = domainClass.memberFunctions.associateBy { it.name }
+
         val fields =
             domainClass.memberProperties
                 .asSequence()
                 .map { property ->
                     (property to property.getter) +
                         (property as? KMutableProperty<*>)?.setter +
-                        domainClass.memberFunctions.firstOrNull { func ->
-                            func.name == property.javaGetterName
-                        } +
+                        memberFunctions[property.javaGetterName] +
                         (property as? KMutableProperty<*>)?.let {
-                            domainClass.memberFunctions.firstOrNull { func ->
-                                func.name == it.javaSetterName
-                            }
+                            memberFunctions[property.javaSetterName]
                         }
                 }
                 .toList()
@@ -81,7 +81,10 @@ constructor(
                 "$fields"
         }
 
-        raise(ExtractionError.NotImplemented)
+        ClassDescriptor(
+            domainClass = domainClass,
+            protoClass = protoClass,
+        )
     }
 
     companion object {

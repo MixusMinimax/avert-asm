@@ -18,12 +18,15 @@ package com.barmetler.avert.util
 
 import java.util.*
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty
 
 private fun String.capitalize() = replaceFirstChar {
     if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
 }
+
+private fun String.decapitalize() = replaceFirstChar { it.lowercase(Locale.getDefault()) }
 
 /**
  * Returns the name of the JVM getter method for this property.
@@ -39,5 +42,21 @@ val KProperty<*>.javaGetterName: String
             else -> "get${name.capitalize()}"
         }
 
+/**
+ * Returns the name of the JVM setter method for this property.
+ *
+ * Only to be used with java beans.
+ */
 val KMutableProperty<*>.javaSetterName: String
     get() = "set${name.capitalize()}"
+
+data class JavaFieldResult(val name: String, val function: KFunction<*>, val isSetter: Boolean)
+
+fun KFunction<*>.javaFieldName(): JavaFieldResult? {
+    val name = name
+    val isSetter = name.startsWith("set")
+    val isGetter = name.startsWith("get") || name.startsWith("is")
+    if (!isSetter && !isGetter) return null
+    val fieldName = name.substring(3)
+    return JavaFieldResult(fieldName.decapitalize(), this, isSetter)
+}
