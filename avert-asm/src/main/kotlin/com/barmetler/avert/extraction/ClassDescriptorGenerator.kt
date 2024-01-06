@@ -17,15 +17,19 @@
 package com.barmetler.avert.extraction
 
 import arrow.core.Either
+import arrow.core.plus
 import arrow.core.raise.either
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.firstOrRaise
+import com.barmetler.avert.util.javaGetterName
+import com.barmetler.avert.util.javaSetterName
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
+import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 
 interface ClassDescriptorGenerator {
@@ -56,16 +60,28 @@ constructor(
             }
 
         val fields =
-            domainClass.memberProperties.map {
-                Triple(it, it.getter, (it as? KMutableProperty<*>)?.setter)
-            }
+            domainClass.memberProperties
+                .asSequence()
+                .map { property ->
+                    (property to property.getter) +
+                        (property as? KMutableProperty<*>)?.setter +
+                        domainClass.memberFunctions.firstOrNull { func ->
+                            func.name == property.javaGetterName
+                        } +
+                        (property as? KMutableProperty<*>)?.let {
+                            domainClass.memberFunctions.firstOrNull { func ->
+                                func.name == it.javaSetterName
+                            }
+                        }
+                }
+                .toList()
 
         logger.warn {
             "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields\n" +
                 "$fields"
         }
 
-        TODO()
+        raise(ExtractionError.NotImplemented)
     }
 
     companion object {

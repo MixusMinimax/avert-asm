@@ -16,9 +16,12 @@
 
 package com.barmetler.workload.initializer
 
+import com.barmetler.proto.person.HumanName as HumanNameMsg
 import com.barmetler.proto.user.User as UserMsg
 import com.barmetler.avert.api.AsmConverterContext
 import com.barmetler.avert.api.ConverterContext
+import com.barmetler.avert.api.getConverter
+import com.barmetler.workload.models.HumanName
 import com.barmetler.workload.models.User
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -30,7 +33,8 @@ class Example {
     @EventListener(ApplicationReadyEvent::class)
     fun example() {
         val converterContext: ConverterContext = AsmConverterContext()
-        converterContext.getConverter(User::class, UserMsg::class)
+        converterContext.getConverter<User, UserMsg>()
+        converterContext.getConverter<HumanName, HumanNameMsg>()
     }
 
     companion object {

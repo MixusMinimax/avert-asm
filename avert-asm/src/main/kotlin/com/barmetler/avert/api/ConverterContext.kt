@@ -24,4 +24,25 @@ interface ConverterContext {
         domainClass: KClass<Domain>,
         protoClass: KClass<Proto>
     ): Converter<Domain, Proto>
+
+    fun <Domain : Any, Proto : Any> toProto(
+        domainClass: KClass<Domain>,
+        protoClass: KClass<Proto>,
+        domain: Domain,
+    ) = getConverter(domainClass, protoClass).toProto(domain, this)
+
+    fun <Domain : Any, Proto : Any> toDomain(
+        domainClass: KClass<Domain>,
+        protoClass: KClass<Proto>,
+        proto: Proto,
+    ) = getConverter(domainClass, protoClass).toDomain(proto, this)
 }
+
+inline fun <reified Domain : Any, reified Proto : Any> ConverterContext.getConverter() =
+    getConverter(Domain::class, Proto::class)
+
+inline fun <reified Domain : Any, reified Proto : Any> ConverterContext.toProto(domain: Domain) =
+    toProto(Domain::class, Proto::class, domain)
+
+inline fun <reified Domain : Any, reified Proto : Any> ConverterContext.toDomain(proto: Proto) =
+    toDomain(Domain::class, Proto::class, proto)

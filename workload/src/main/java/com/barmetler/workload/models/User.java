@@ -53,6 +53,10 @@ public class User {
     @ProtoField
     private PersonalDetails personalDetails;
 
+    private boolean b1;
+
+    private Boolean b2;
+
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;

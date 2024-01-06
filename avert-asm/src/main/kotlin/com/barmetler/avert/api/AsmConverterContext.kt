@@ -39,7 +39,15 @@ class AsmConverterContext : ConverterContext {
 
         classDescriptorGenerator.classDescriptorOf(domainClass)
 
-        TODO("Not yet implemented")
+        return object : Converter<Domain, Proto> {
+            override fun toProto(domain: Domain, context: ConverterContext?): Proto {
+                TODO()
+            }
+
+            override fun toDomain(proto: Proto, context: ConverterContext?): Domain {
+                TODO()
+            }
+        }
     }
 
     companion object {
