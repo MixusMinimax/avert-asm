@@ -18,14 +18,17 @@ package com.barmetler.avert.api
 
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.extraction.ClassDescriptorGeneratorImpl
+import com.barmetler.avert.extraction.ExtractionModule
 import com.barmetler.avert.extraction.FieldDescriptorGenerator
+import dagger.Component
 import io.github.oshai.kotlinlogging.KotlinLogging
+import javax.inject.Singleton
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
 
 class AsmConverterContext : ConverterContext {
 
-    interface Module
+    @Singleton @Component(modules = [ExtractionModule::class]) interface Module
 
     override fun <Domain : Any, Proto : Any> getConverter(
         domainClass: KClass<Domain>,
