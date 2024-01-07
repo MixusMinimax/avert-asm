@@ -20,6 +20,7 @@ import arrow.core.Either
 import arrow.core.raise.either
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.dto.ClassDescriptor
+import com.barmetler.avert.dto.FieldDescriptor
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.firstOrRaise
@@ -27,8 +28,6 @@ import com.barmetler.avert.util.javaFieldName
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-import kotlin.reflect.KProperty
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 
@@ -38,11 +37,7 @@ interface ClassDescriptorGenerator {
     ): Either<ExtractionError, ClassDescriptor>
 }
 
-class ClassDescriptorGeneratorImpl
-@Inject
-constructor(
-    val fieldDescriptorGenerator: FieldDescriptorGenerator,
-) : ClassDescriptorGenerator {
+class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenerator {
     private val classDescriptors = mutableMapOf<KClass<*>, ClassDescriptor>()
 
     override fun classDescriptorOf(
@@ -61,21 +56,14 @@ constructor(
 
         val protoClass = annotation.protoClass
 
-        data class DomainField(
-            val name: String,
-            val field: KProperty<*>? = null,
-            val getter: KFunction<*>? = null,
-            val setter: KFunction<*>? = null,
-        )
-
         val fields = run {
             val javaAccessors =
                 domainClass.memberFunctions
                     .asSequence()
                     .mapNotNull { it.javaFieldName() }
                     .groupingBy { it.name }
-                    .fold(null as DomainField?) { accNull, field ->
-                        (accNull ?: DomainField(field.name)).let { acc ->
+                    .fold(null as FieldDescriptor?) { accNull, field ->
+                        (accNull ?: FieldDescriptor(field.name)).let { acc ->
                             when {
                                 field.isSetter -> acc.copy(setter = field.function)
                                 else -> acc.copy(getter = field.function)
@@ -87,13 +75,14 @@ constructor(
                 .asSequence()
                 .map { property ->
                     val javaProperty = javaAccessors[property.name]
-                    DomainField(
+                    FieldDescriptor(
                         name = property.name,
                         field = property,
                         getter = javaProperty?.getter ?: property.getter,
                         setter = javaProperty?.setter ?: property.asMutable?.setter,
                     )
                 }
+                .map { fieldDescriptor -> fieldDescriptor }
                 .associateBy { it.name }
         }
 

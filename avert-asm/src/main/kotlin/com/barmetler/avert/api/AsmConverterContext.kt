@@ -17,9 +17,8 @@
 package com.barmetler.avert.api
 
 import com.barmetler.avert.annotation.ProtoClass
-import com.barmetler.avert.extraction.ClassDescriptorGeneratorImpl
+import com.barmetler.avert.extraction.ClassDescriptorGenerator
 import com.barmetler.avert.extraction.ExtractionModule
-import com.barmetler.avert.extraction.FieldDescriptorGenerator
 import dagger.Component
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Singleton
@@ -28,7 +27,19 @@ import kotlin.reflect.full.findAnnotations
 
 class AsmConverterContext : ConverterContext {
 
-    @Singleton @Component(modules = [ExtractionModule::class]) interface Module
+    @Singleton
+    @Component(modules = [ExtractionModule::class])
+    internal interface Implementation {
+        fun classDescriptorGenerator(): ClassDescriptorGenerator
+
+        @Component.Builder
+        interface Builder {
+            fun build(): Implementation
+        }
+    }
+
+    private val implementation = DaggerAsmConverterContext_Implementation.create()
+    private val classDescriptorGenerator = implementation.classDescriptorGenerator()
 
     override fun <Domain : Any, Proto : Any> getConverter(
         domainClass: KClass<Domain>,
@@ -36,9 +47,6 @@ class AsmConverterContext : ConverterContext {
     ): Converter<Domain, Proto> {
         val annotation = domainClass.findAnnotations(ProtoClass::class).firstOrNull()
         logger.info { annotation }
-
-        val classDescriptorGenerator =
-            ClassDescriptorGeneratorImpl(object : FieldDescriptorGenerator {})
 
         classDescriptorGenerator.classDescriptorOf(domainClass)
 

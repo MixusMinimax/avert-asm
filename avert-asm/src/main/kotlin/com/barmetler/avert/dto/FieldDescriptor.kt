@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,20 @@
 
 package com.barmetler.avert.dto
 
+import com.google.protobuf.Descriptors
+import kotlin.reflect.KFunction
+import kotlin.reflect.KProperty
+
 data class FieldDescriptor(
     val name: String,
-    val parent: ClassDescriptor,
-)
+    val field: KProperty<*>? = null,
+    val getter: KFunction<*>? = null,
+    val setter: KFunction<*>? = null,
+    val protoFieldDescriptor: ProtoFieldDescriptors? = null,
+) {
+    data class ProtoFieldDescriptors(
+        val fieldDescriptor: Descriptors.FieldDescriptor? = null,
+        val toProtoDescriptor: Descriptors.MethodDescriptor? = null,
+        val toDomainDescriptor: Descriptors.MethodDescriptor? = null,
+    )
+}

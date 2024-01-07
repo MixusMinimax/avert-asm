@@ -18,9 +18,13 @@ package com.barmetler.avert.extraction
 
 import dagger.Binds
 import dagger.Module
+import javax.inject.Singleton
 
 @Module
 interface ExtractionModule {
     @Binds
-    fun classDescriptorGenerator(impl: ClassDescriptorGeneratorImpl): ClassDescriptorGenerator
+    @Singleton
+    fun bindDomainClassDescriptorGenerator(
+        impl: ClassDescriptorGeneratorImpl
+    ): ClassDescriptorGenerator
 }
