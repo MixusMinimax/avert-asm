@@ -33,7 +33,7 @@ private fun String.decapitalize() = replaceFirstChar { it.lowercase(Locale.getDe
  *
  * Only to be used with java beans.
  */
-val KProperty<*>.javaGetterName: String
+internal val KProperty<*>.javaGetterName: String
     get() =
         when {
             // internal boolean, must not be java Boolean wrapper
@@ -47,12 +47,16 @@ val KProperty<*>.javaGetterName: String
  *
  * Only to be used with java beans.
  */
-val KMutableProperty<*>.javaSetterName: String
+internal val KMutableProperty<*>.javaSetterName: String
     get() = "set${name.capitalize()}"
 
-data class JavaFieldResult(val name: String, val function: KFunction<*>, val isSetter: Boolean)
+internal data class JavaFieldResult(
+    val name: String,
+    val function: KFunction<*>,
+    val isSetter: Boolean
+)
 
-fun KFunction<*>.javaFieldName(): JavaFieldResult? {
+internal fun KFunction<*>.javaFieldName(): JavaFieldResult? {
     val name = name
     val isSetter = name.startsWith("set")
     val isGetter = name.startsWith("get") || name.startsWith("is")

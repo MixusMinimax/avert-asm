@@ -21,13 +21,13 @@ import arrow.core.raise.either
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.errors.ExtractionError
+import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.firstOrRaise
 import com.barmetler.avert.util.javaFieldName
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
-import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
@@ -91,7 +91,7 @@ constructor(
                         name = property.name,
                         field = property,
                         getter = javaProperty?.getter ?: property.getter,
-                        setter = javaProperty?.setter ?: (property as? KMutableProperty<*>)?.setter,
+                        setter = javaProperty?.setter ?: property.asMutable?.setter,
                     )
                 }
                 .associateBy { it.name }

@@ -16,9 +16,8 @@
 
 package com.barmetler.avert.util
 
-import com.barmetler.avert.api.Converter
-import com.barmetler.avert.api.ConverterContext
+import kotlin.reflect.KMutableProperty
+import kotlin.reflect.KProperty
 
-/** @see ConverterContext.getConverter */
-inline fun <reified Domain : Any, reified Proto : Any> ConverterContext.getConverter():
-    Converter<Domain, Proto> = getConverter(Domain::class, Proto::class)
+internal val <T> KProperty<T>.asMutable: KMutableProperty<T>?
+    get() = this as? KMutableProperty<T>
