@@ -17,18 +17,18 @@
 package com.barmetler.avert.extraction
 
 import arrow.core.Either
-import arrow.core.plus
 import arrow.core.raise.either
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.firstOrRaise
-import com.barmetler.avert.util.javaGetterName
-import com.barmetler.avert.util.javaSetterName
+import com.barmetler.avert.util.javaFieldName
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
 import kotlin.reflect.KMutableProperty
+import kotlin.reflect.KProperty
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 
@@ -61,20 +61,41 @@ constructor(
 
         val protoClass = annotation.protoClass
 
-        val memberFunctions = domainClass.memberFunctions.associateBy { it.name }
+        data class DomainField(
+            val name: String,
+            val field: KProperty<*>? = null,
+            val getter: KFunction<*>? = null,
+            val setter: KFunction<*>? = null,
+        )
 
-        val fields =
+        val fields = run {
+            val javaAccessors =
+                domainClass.memberFunctions
+                    .asSequence()
+                    .mapNotNull { it.javaFieldName() }
+                    .groupingBy { it.name }
+                    .fold(null as DomainField?) { accNull, field ->
+                        (accNull ?: DomainField(field.name)).let { acc ->
+                            when {
+                                field.isSetter -> acc.copy(setter = field.function)
+                                else -> acc.copy(getter = field.function)
+                            }
+                        }
+                    }
+
             domainClass.memberProperties
                 .asSequence()
                 .map { property ->
-                    (property to property.getter) +
-                        (property as? KMutableProperty<*>)?.setter +
-                        memberFunctions[property.javaGetterName] +
-                        (property as? KMutableProperty<*>)?.let {
-                            memberFunctions[property.javaSetterName]
-                        }
+                    val javaProperty = javaAccessors[property.name]
+                    DomainField(
+                        name = property.name,
+                        field = property,
+                        getter = javaProperty?.getter ?: property.getter,
+                        setter = javaProperty?.setter ?: (property as? KMutableProperty<*>)?.setter,
+                    )
                 }
-                .toList()
+                .associateBy { it.name }
+        }
 
         logger.warn {
             "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields\n" +
