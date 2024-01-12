@@ -28,6 +28,7 @@ import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.asSubclassOf
 import com.barmetler.avert.util.firstOrRaise
 import com.barmetler.avert.util.javaFieldName
+import com.google.protobuf.Descriptors
 import com.google.protobuf.Message
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
@@ -64,10 +65,14 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
         val protoClass = annotation.protoClass
         val protoMessage = protoClass.asSubclassOf<Message>()
         val protoDescriptor =
-            protoMessage?.staticFunctions?.firstOrRaise({ ExtractionError.InvalidProtoClass }) {
-                function ->
-                function.name == "getDescriptor" && function.parameters.all { it.isOptional }
-            }
+            protoMessage
+                ?.staticFunctions
+                ?.firstOrRaise({ ExtractionError.InvalidProtoClass }) { function ->
+                    function.name == "getDescriptor" && function.parameters.all { it.isOptional }
+                }
+                ?.run {
+                    call() as? Descriptors.Descriptor ?: raise(ExtractionError.InvalidProtoClass)
+                }
         val customConverter =
             annotation.converter
                 .takeUnless { it.isAbstract }
@@ -80,6 +85,8 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                         }
                     customConverter
                 }
+
+        logger.warn { "ProtoClass descriptor for $protoClass:\n$protoDescriptor" }
 
         val fields = run {
             if (customConverter == null && protoDescriptor != null) {
