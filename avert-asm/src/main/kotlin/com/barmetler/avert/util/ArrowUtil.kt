@@ -26,3 +26,15 @@ internal inline fun <Error, Result> Sequence<Result>.firstOrRaise(error: () -> E
 context(Raise<Error>)
 internal inline fun <Error, Result> Iterable<Result>.firstOrRaise(error: () -> Error): Result =
     firstOrNull().toOption().toEither(error).bind()
+
+context(Raise<Error>)
+internal inline fun <Error, Result> Sequence<Result>.firstOrRaise(
+    error: () -> Error,
+    predicate: (Result) -> Boolean,
+): Result = firstOrNull(predicate).toOption().toEither(error).bind()
+
+context(Raise<Error>)
+internal inline fun <Error, Result> Iterable<Result>.firstOrRaise(
+    error: () -> Error,
+    predicate: (Result) -> Boolean,
+): Result = firstOrNull(predicate).toOption().toEither(error).bind()

@@ -16,8 +16,18 @@
 
 package com.barmetler.avert.util
 
+import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty
+import kotlin.reflect.full.isSubclassOf
 
 internal val <T> KProperty<T>.asMutable: KMutableProperty<T>?
     get() = this as? KMutableProperty<T>
+
+internal inline fun <reified T : Any> KClass<*>.asSubclassOf(): KClass<T>? =
+    if (this.isSubclassOf(T::class)) {
+        @Suppress("UNCHECKED_CAST")
+        this as KClass<T>
+    } else {
+        null
+    }

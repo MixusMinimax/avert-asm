@@ -19,5 +19,7 @@ package com.barmetler.avert.errors
 sealed interface ExtractionError {
     data object AnnotationMissing : ExtractionError
 
+    data object InvalidProtoClass : ExtractionError
+
     data object NotImplemented : ExtractionError
 }

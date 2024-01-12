@@ -29,7 +29,7 @@ data class FieldDescriptor(
 ) {
     data class ProtoFieldDescriptors(
         val fieldDescriptor: Descriptors.FieldDescriptor? = null,
-        val toProtoDescriptor: Descriptors.MethodDescriptor? = null,
-        val toDomainDescriptor: Descriptors.MethodDescriptor? = null,
+        val toProtoDescriptor: Descriptors.FieldDescriptor? = null,
+        val toDomainDescriptor: Descriptors.FieldDescriptor? = null,
     )
 }

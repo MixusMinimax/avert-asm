@@ -19,17 +19,24 @@ package com.barmetler.avert.extraction
 import arrow.core.Either
 import arrow.core.raise.either
 import com.barmetler.avert.annotation.ProtoClass
+import com.barmetler.avert.annotation.ProtoField
+import com.barmetler.avert.api.Converter
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.dto.FieldDescriptor
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.asMutable
+import com.barmetler.avert.util.asSubclassOf
 import com.barmetler.avert.util.firstOrRaise
 import com.barmetler.avert.util.javaFieldName
+import com.google.protobuf.Message
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.full.allSupertypes
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.staticFunctions
 
 interface ClassDescriptorGenerator {
     fun classDescriptorOf(
@@ -55,39 +62,61 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
             }
 
         val protoClass = annotation.protoClass
+        val protoMessage = protoClass.asSubclassOf<Message>()
+        val protoDescriptor =
+            protoMessage?.staticFunctions?.firstOrRaise({ ExtractionError.InvalidProtoClass }) {
+                function ->
+                function.name == "getDescriptor" && function.parameters.all { it.isOptional }
+            }
+        val customConverter =
+            annotation.converter
+                .takeUnless { it.isAbstract }
+                ?.let { customConverter ->
+                    val converterType =
+                        customConverter.allSupertypes.firstOrRaise({
+                            ExtractionError.NotImplemented
+                        }) {
+                            it.classifier == Converter::class
+                        }
+                    customConverter
+                }
 
         val fields = run {
-            val javaAccessors =
-                domainClass.memberFunctions
-                    .asSequence()
-                    .mapNotNull { it.javaFieldName() }
-                    .groupingBy { it.name }
-                    .fold(null as FieldDescriptor?) { accNull, field ->
-                        (accNull ?: FieldDescriptor(field.name)).let { acc ->
-                            when {
-                                field.isSetter -> acc.copy(setter = field.function)
-                                else -> acc.copy(getter = field.function)
+            if (customConverter == null && protoDescriptor != null) {
+                val javaAccessors =
+                    domainClass.memberFunctions
+                        .asSequence()
+                        .mapNotNull { it.javaFieldName() }
+                        .groupingBy { it.name }
+                        .fold(null as FieldDescriptor?) { accNull, field ->
+                            (accNull ?: FieldDescriptor(field.name)).let { acc ->
+                                when {
+                                    field.isSetter -> acc.copy(setter = field.function)
+                                    else -> acc.copy(getter = field.function)
+                                }
                             }
                         }
-                    }
 
-            domainClass.memberProperties
-                .asSequence()
-                .map { property ->
-                    val javaProperty = javaAccessors[property.name]
-                    FieldDescriptor(
-                        name = property.name,
-                        field = property,
-                        getter = javaProperty?.getter ?: property.getter,
-                        setter = javaProperty?.setter ?: property.asMutable?.setter,
-                    )
-                }
-                .map { fieldDescriptor -> fieldDescriptor }
-                .associateBy { it.name }
+                domainClass.memberProperties
+                    .asSequence()
+                    .map { property ->
+                        val javaProperty = javaAccessors[property.name]
+                        FieldDescriptor(
+                            name = property.name,
+                            field = property,
+                            getter = javaProperty?.getter ?: property.getter,
+                            setter = javaProperty?.setter ?: property.asMutable?.setter,
+                        )
+                    }
+                    .map { fieldDescriptor -> fieldDescriptor }
+                    .associateBy { it.name }
+            } else {
+                null
+            }
         }
 
         logger.warn {
-            "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields\n" +
+            "Generating class descriptor for ${domainClass.simpleName} with ${fields?.size} fields\n" +
                 "$fields"
         }
 
@@ -96,6 +125,9 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
             protoClass = protoClass,
         )
     }
+
+    private val KFunction<*>.protoFieldAnnotation: ProtoField?
+        get() = annotations.asSequence().filterIsInstance<ProtoField>().firstOrNull()
 
     companion object {
         private val logger = KotlinLogging.logger {}
