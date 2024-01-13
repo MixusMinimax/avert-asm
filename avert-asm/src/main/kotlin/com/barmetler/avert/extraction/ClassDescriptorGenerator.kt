@@ -144,6 +144,10 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                                 ),
                         )
                     } + syntheticJavaAccessors)
+                    .filter {
+                        it.protoFieldDescriptor?.toProtoFieldAnnotation != null ||
+                            it.protoFieldDescriptor?.toDomainFieldAnnotation != null
+                    }
                     .map { fieldDescriptor -> fieldDescriptor }
                     .associateBy { it.name }
             } else {
