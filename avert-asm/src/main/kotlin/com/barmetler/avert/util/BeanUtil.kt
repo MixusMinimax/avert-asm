@@ -56,11 +56,13 @@ internal data class JavaFieldResult(
     val isSetter: Boolean
 )
 
-internal fun KFunction<*>.javaFieldName(): JavaFieldResult? {
+private val prefixRegex = "^(set|get|is)".toRegex()
+
+internal fun KFunction<*>.javaFieldName(): JavaFieldResult {
     val name = name
     val isSetter = name.startsWith("set")
     val isGetter = name.startsWith("get") || name.startsWith("is")
-    if (!isSetter && !isGetter) return null
-    val fieldName = name.substring(3)
+    if (!isSetter && !isGetter) return JavaFieldResult(name, this, false)
+    val fieldName = name.replaceFirst(prefixRegex, "")
     return JavaFieldResult(fieldName.decapitalize(), this, isSetter)
 }

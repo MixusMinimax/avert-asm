@@ -16,6 +16,7 @@
 
 package com.barmetler.avert.dto
 
+import com.barmetler.avert.annotation.ProtoField
 import com.google.protobuf.Descriptors
 import kotlin.reflect.KFunction
 import kotlin.reflect.KProperty
@@ -28,8 +29,9 @@ data class FieldDescriptor(
     val protoFieldDescriptor: ProtoFieldDescriptors? = null,
 ) {
     data class ProtoFieldDescriptors(
-        val fieldDescriptor: Descriptors.FieldDescriptor? = null,
+        val toProtoFieldAnnotation: ProtoField? = null,
         val toProtoDescriptor: Descriptors.FieldDescriptor? = null,
+        val toDomainFieldAnnotation: ProtoField? = null,
         val toDomainDescriptor: Descriptors.FieldDescriptor? = null,
     )
 }

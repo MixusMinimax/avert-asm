@@ -32,8 +32,8 @@ import com.google.protobuf.Descriptors
 import com.google.protobuf.Message
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
+import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
 import kotlin.reflect.full.allSupertypes
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
@@ -93,7 +93,7 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                 val javaAccessors =
                     domainClass.memberFunctions
                         .asSequence()
-                        .mapNotNull { it.javaFieldName() }
+                        .map { it.javaFieldName() }
                         .groupingBy { it.name }
                         .fold(null as FieldDescriptor?) { accNull, field ->
                             (accNull ?: FieldDescriptor(field.name)).let { acc ->
@@ -104,17 +104,46 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                             }
                         }
 
-                domainClass.memberProperties
-                    .asSequence()
-                    .map { property ->
+                val propertyNames =
+                    domainClass.memberProperties.asSequence().map { it.name }.toSet()
+
+                val syntheticJavaAccessors =
+                    javaAccessors
+                        .asSequence()
+                        .filter { (key, _) -> key !in propertyNames }
+                        .mapNotNull { (_, v) -> v }
+                        .map {
+                            it.copy(
+                                protoFieldDescriptor =
+                                    FieldDescriptor.ProtoFieldDescriptors(
+                                        toProtoFieldAnnotation = it.getter?.protoFieldAnnotation,
+                                        toDomainFieldAnnotation = it.setter?.protoFieldAnnotation,
+                                    )
+                            )
+                        }
+
+                (domainClass.memberProperties.asSequence().map { property ->
                         val javaProperty = javaAccessors[property.name]
+                        val toProtoFieldAnnotation =
+                            javaProperty?.getter?.protoFieldAnnotation
+                                ?: property.getter.protoFieldAnnotation
+                                ?: property.protoFieldAnnotation
+                        val toDomainFieldAnnotation =
+                            javaProperty?.setter?.protoFieldAnnotation
+                                ?: property.asMutable?.setter?.protoFieldAnnotation
+                                ?: property.protoFieldAnnotation
                         FieldDescriptor(
                             name = property.name,
                             field = property,
                             getter = javaProperty?.getter ?: property.getter,
                             setter = javaProperty?.setter ?: property.asMutable?.setter,
+                            protoFieldDescriptor =
+                                FieldDescriptor.ProtoFieldDescriptors(
+                                    toProtoFieldAnnotation = toProtoFieldAnnotation,
+                                    toDomainFieldAnnotation = toDomainFieldAnnotation,
+                                ),
                         )
-                    }
+                    } + syntheticJavaAccessors)
                     .map { fieldDescriptor -> fieldDescriptor }
                     .associateBy { it.name }
             } else {
@@ -133,7 +162,7 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
         )
     }
 
-    private val KFunction<*>.protoFieldAnnotation: ProtoField?
+    private val KAnnotatedElement.protoFieldAnnotation: ProtoField?
         get() = annotations.asSequence().filterIsInstance<ProtoField>().firstOrNull()
 
     companion object {
