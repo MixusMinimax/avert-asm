@@ -21,6 +21,7 @@ import com.barmetler.proto.user.User as UserMsg
 import com.barmetler.avert.api.AsmConverterContext
 import com.barmetler.avert.api.ConverterContext
 import com.barmetler.avert.api.getConverter
+import com.barmetler.workload.dto.UserDto
 import com.barmetler.workload.models.HumanName
 import com.barmetler.workload.models.User
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -34,6 +35,7 @@ class Example {
     fun example() {
         val converterContext: ConverterContext = AsmConverterContext()
         converterContext.getConverter<User, UserMsg>()
+        converterContext.getConverter<UserDto, UserMsg>()
         converterContext.getConverter<HumanName, HumanNameMsg>()
     }
 
