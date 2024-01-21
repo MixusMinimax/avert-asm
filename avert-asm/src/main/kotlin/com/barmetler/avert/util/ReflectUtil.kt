@@ -17,17 +17,31 @@
 package com.barmetler.avert.util
 
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.kotlinFunction
 
 internal val <T> KProperty<T>.asMutable: KMutableProperty<T>?
     get() = this as? KMutableProperty<T>
 
 internal inline fun <reified T : Any> KClass<*>.asSubclassOf(): KClass<T>? =
-    if (this.isSubclassOf(T::class)) {
+    if (isSubclassOf(T::class)) {
         @Suppress("UNCHECKED_CAST")
         this as KClass<T>
     } else {
         null
     }
+
+internal fun <T : Any> KClass<T>.getDomainConstructor(): KFunction<T>? {
+    primaryConstructor?.let {
+        return it
+    }
+    if (java.isRecord) {
+        val argumentTypes = java.recordComponents.mapToArray { it.type }
+        return java.getDeclaredConstructor(*argumentTypes).kotlinFunction
+    }
+    return constructors.firstOrNull { constructor -> constructor.parameters.all { it.isOptional } }
+}

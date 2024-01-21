@@ -27,6 +27,7 @@ import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.asSubclassOf
 import com.barmetler.avert.util.firstOrRaise
+import com.barmetler.avert.util.getDomainConstructor
 import com.barmetler.avert.util.javaFieldName
 import com.google.protobuf.Descriptors
 import com.google.protobuf.Message
@@ -61,6 +62,8 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
             domainClass.annotations.filterIsInstance<ProtoClass>().firstOrRaise {
                 ExtractionError.AnnotationMissing
             }
+
+        val domainConstructor = domainClass.getDomainConstructor()
 
         val protoClass = annotation.protoClass
         val protoMessage = protoClass.asSubclassOf<Message>()
@@ -160,9 +163,12 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                 "$fields"
         }
 
+        logger.warn { "${domainClass.simpleName} is java record: ${domainClass.java.isRecord}" }
+
         ClassDescriptor(
             domainClass = domainClass,
             protoClass = protoClass,
+            domainConstructor = domainConstructor,
         )
     }
 

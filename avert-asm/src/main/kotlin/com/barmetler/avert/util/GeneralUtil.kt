@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,7 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.dto
+package com.barmetler.avert.util
 
-import com.barmetler.avert.api.Converter
-import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-
-data class ClassDescriptor(
-    val domainClass: KClass<*>,
-    val protoClass: KClass<*>,
-    val customConverter: KClass<out Converter<*, *>>? = null,
-    val domainConstructor: KFunction<*>? = null,
-    val fields: List<FieldDescriptor> = emptyList(),
-)
+internal inline fun <A, reified B> Array<A>.mapToArray(transform: (A) -> B) =
+    Array(size) { transform(get(it)) }
