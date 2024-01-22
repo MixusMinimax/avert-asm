@@ -35,7 +35,11 @@ internal inline fun <reified T : Any> KClass<*>.asSubclassOf(): KClass<T>? =
         null
     }
 
-internal fun <T : Any> KClass<T>.getDomainConstructor(): KFunction<T>? {
+/**
+ * @return The primary constructor if it exists, or the record constructor if the class is a java
+ *   record.
+ */
+internal fun <T : Any> KClass<T>.getCanonicalConstructor(): KFunction<T>? {
     primaryConstructor?.let {
         return it
     }
@@ -43,5 +47,5 @@ internal fun <T : Any> KClass<T>.getDomainConstructor(): KFunction<T>? {
         val argumentTypes = java.recordComponents.mapToArray { it.type }
         return java.getDeclaredConstructor(*argumentTypes).kotlinFunction
     }
-    return constructors.firstOrNull { constructor -> constructor.parameters.all { it.isOptional } }
+    return null
 }

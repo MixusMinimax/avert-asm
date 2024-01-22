@@ -27,7 +27,7 @@ import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.asSubclassOf
 import com.barmetler.avert.util.firstOrRaise
-import com.barmetler.avert.util.getDomainConstructor
+import com.barmetler.avert.util.getCanonicalConstructor
 import com.barmetler.avert.util.javaFieldName
 import com.google.protobuf.Descriptors
 import com.google.protobuf.Message
@@ -59,11 +59,11 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
         domainClass: KClass<*>,
     ): Either<ExtractionError, ClassDescriptor> = either {
         val annotation =
-            domainClass.annotations.filterIsInstance<ProtoClass>().firstOrRaise {
+            domainClass.annotations.asSequence().filterIsInstance<ProtoClass>().firstOrRaise {
                 ExtractionError.AnnotationMissing
             }
 
-        val domainConstructor = domainClass.getDomainConstructor()
+        val domainConstructor = domainClass.getCanonicalConstructor()
 
         val protoClass = annotation.protoClass
         val protoMessage = protoClass.asSubclassOf<Message>()
