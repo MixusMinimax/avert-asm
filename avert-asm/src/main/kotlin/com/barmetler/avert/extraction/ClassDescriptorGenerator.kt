@@ -18,24 +18,23 @@ package com.barmetler.avert.extraction
 
 import arrow.core.Either
 import arrow.core.partially1
+import arrow.core.raise.Raise
 import arrow.core.raise.either
-import arrow.optics.copy
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.annotation.ProtoField
 import com.barmetler.avert.api.Converter
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.dto.FieldDescriptor
-import com.barmetler.avert.dto.constructorArgument
-import com.barmetler.avert.dto.domainClass
-import com.barmetler.avert.dto.name
 import com.barmetler.avert.dto.protoFieldDescriptor
 import com.barmetler.avert.dto.toDomainFieldAnnotation
 import com.barmetler.avert.dto.toProtoDescriptor
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.asSubclassOf
+import com.barmetler.avert.util.findAnnotationOrRaise
 import com.barmetler.avert.util.firstOrRaise
 import com.barmetler.avert.util.getCanonicalConstructor
+import com.barmetler.avert.util.isEmptyCallable
 import com.barmetler.avert.util.javaFieldName
 import com.google.protobuf.Descriptors
 import com.google.protobuf.Message
@@ -68,36 +67,15 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
     private fun generateClassDescriptor(
         domainClass: KClass<*>,
     ): Either<ExtractionError, ClassDescriptor> = either {
-        val annotation =
-            domainClass.annotations.asSequence().filterIsInstance<ProtoClass>().firstOrRaise {
-                ExtractionError.AnnotationMissing
-            }
-
-        val canonicalConstructor = domainClass.getCanonicalConstructor()
+        val annotation = domainClass.findAnnotationOrRaise<ProtoClass>()
 
         val protoClass = annotation.protoClass
         val protoMessage = protoClass.asSubclassOf<Message>()
-        val protoDescriptor =
-            protoMessage
-                ?.staticFunctions
-                ?.firstOrRaise({ ExtractionError.InvalidProtoClass }) { function ->
-                    function.name == "getDescriptor" && function.parameters.all { it.isOptional }
-                }
-                ?.run {
-                    call() as? Descriptors.Descriptor ?: raise(ExtractionError.InvalidProtoClass)
-                }
-        val customConverter =
-            annotation.converter
-                .takeUnless { it.isAbstract }
-                ?.let { customConverter ->
-                    val converterType =
-                        customConverter.allSupertypes.firstOrRaise({
-                            ExtractionError.NotImplemented
-                        }) {
-                            it.classifier == Converter::class
-                        }
-                    customConverter
-                }
+        val protoDescriptor = protoMessage?.getProtoDescriptor()
+
+        val customConverter = annotation.getCustomConverter()
+
+        val canonicalConstructor = domainClass.getCanonicalConstructor()
 
         logger.warn { "ProtoClass descriptor for $protoClass:\n$protoDescriptor" }
 
@@ -168,25 +146,7 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
             }
         }
 
-        // Search for constructor that only has arguments that either:
-        // - annotated by ProtoField
-        // - already present in the list of fields
-        // - have a default value
-        // ordered by number of arguments descending.
-        // This is necessary for a common pattern:
-        // - a java class with AllArgsConstructor or RequiredArgsConstructor.
-        val domainConstructor =
-            canonicalConstructor
-                ?: domainClass.constructors.firstOrNull { constructor ->
-                    constructor.valueParameters.all { parameter ->
-                        when {
-                            parameter.isOptional -> true
-                            fields != null && parameter.name in fields.keys -> true
-                            parameter.hasAnnotation<ProtoField>() -> true
-                            else -> false
-                        }
-                    }
-                }
+        val domainConstructor = canonicalConstructor ?: domainClass.findDomainConstructor(fields)
 
         val fieldsWithConstructorArguments = fields?.toMutableMap() ?: mutableMapOf()
 
@@ -216,6 +176,46 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
             fields = fieldsWithConstructorArguments.values.toList(),
         )
     }
+
+    context(Raise<ExtractionError.InvalidProtoClass>)
+    private fun KClass<out Message>.getProtoDescriptor() =
+        staticFunctions
+            .firstOrRaise({ ExtractionError.InvalidProtoClass }) { function ->
+                function.name == "getDescriptor" && function.isEmptyCallable
+            }
+            .run { call() as? Descriptors.Descriptor ?: raise(ExtractionError.InvalidProtoClass) }
+
+    context(Raise<ExtractionError.NotImplemented>)
+    private fun ProtoClass.getCustomConverter() =
+        converter
+            .takeUnless { it.isAbstract }
+            ?.let { customConverter ->
+                val converterType =
+                    customConverter.allSupertypes.firstOrRaise({ ExtractionError.NotImplemented }) {
+                        it.classifier == Converter::class
+                    }
+                customConverter
+            }
+
+    /**
+     * Search for constructor that only has arguments that either:
+     * - annotated by ProtoField
+     * - already present in the list of fields
+     * - have a default value ordered by number of arguments descending. This is necessary for a
+     *   common pattern:
+     * - a java class with AllArgsConstructor or RequiredArgsConstructor.
+     */
+    private fun KClass<*>.findDomainConstructor(fields: Map<String, Any?>?) =
+        constructors.firstOrNull { constructor ->
+            constructor.valueParameters.all { parameter ->
+                when {
+                    parameter.isOptional -> true
+                    fields != null && parameter.name in fields.keys -> true
+                    parameter.hasAnnotation<ProtoField>() -> true
+                    else -> false
+                }
+            }
+        }
 
     private val KAnnotatedElement.protoFieldAnnotation: ProtoField?
         get() = annotations.asSequence().filterIsInstance<ProtoField>().firstOrNull()

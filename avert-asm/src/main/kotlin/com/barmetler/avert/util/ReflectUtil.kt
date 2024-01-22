@@ -16,10 +16,15 @@
 
 package com.barmetler.avert.util
 
+import arrow.core.raise.Raise
+import com.barmetler.avert.errors.ExtractionError
+import kotlin.reflect.KAnnotatedElement
+import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.kotlinFunction
@@ -49,3 +54,10 @@ internal fun <T : Any> KClass<T>.getCanonicalConstructor(): KFunction<T>? {
     }
     return null
 }
+
+context(Raise<ExtractionError.AnnotationMissing>)
+internal inline fun <reified T : Annotation> KAnnotatedElement.findAnnotationOrRaise() =
+    findAnnotation<T>() ?: raise(ExtractionError.AnnotationMissing)
+
+internal val KCallable<*>.isEmptyCallable
+    get() = parameters.all { it.isOptional }
