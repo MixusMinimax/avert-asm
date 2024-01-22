@@ -36,9 +36,11 @@ import javax.inject.Inject
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 import kotlin.reflect.full.allSupertypes
+import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.staticFunctions
+import kotlin.reflect.full.valueParameters
 
 interface ClassDescriptorGenerator {
     fun classDescriptorOf(
@@ -63,7 +65,7 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                 ExtractionError.AnnotationMissing
             }
 
-        val domainConstructor = domainClass.getCanonicalConstructor()
+        val canonicalConstructor = domainClass.getCanonicalConstructor()
 
         val protoClass = annotation.protoClass
         val protoMessage = protoClass.asSubclassOf<Message>()
@@ -156,6 +158,38 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
             } else {
                 null
             }
+        }
+
+        // Search for constructor that only has arguments that either:
+        // - annotated by ProtoField
+        // - already present in the list of fields
+        // - have a default value
+        // ordered by number of arguments descending.
+        // This is necessary for a common pattern:
+        // - a java class with AllArgsConstructor or RequiredArgsConstructor.
+        val domainConstructor =
+            canonicalConstructor
+                ?: domainClass.constructors.firstOrNull { constructor ->
+                    constructor.valueParameters.all { parameter ->
+                        when {
+                            parameter.isOptional -> true
+                            fields != null && parameter.name in fields.keys -> true
+                            parameter.hasAnnotation<ProtoField>() -> true
+                            else -> false
+                        }
+                    }
+                }
+
+        val fieldsWithConstructorArguments = fields?.toMutableMap() ?: mutableMapOf()
+
+        domainConstructor?.valueParameters?.forEach { parameter ->
+            val name = parameter.name ?: return@forEach
+            val fieldDescriptor =
+                fieldsWithConstructorArguments
+                    .computeIfAbsent(name) { _ -> FieldDescriptor(name = name) }
+                    .run { copy() }
+
+            fieldsWithConstructorArguments[name] = fieldDescriptor
         }
 
         logger.warn {
