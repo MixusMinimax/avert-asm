@@ -16,14 +16,18 @@
 
 package com.barmetler.avert.dto
 
+import arrow.optics.optics
 import com.barmetler.avert.api.Converter
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
+@optics
 data class ClassDescriptor(
     val domainClass: KClass<*>,
     val protoClass: KClass<*>,
     val customConverter: KClass<out Converter<*, *>>? = null,
     val domainConstructor: KFunction<*>? = null,
     val fields: List<FieldDescriptor> = emptyList(),
-)
+) {
+    companion object
+}

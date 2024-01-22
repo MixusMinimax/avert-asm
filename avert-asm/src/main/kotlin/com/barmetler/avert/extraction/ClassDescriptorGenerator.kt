@@ -184,10 +184,20 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
 
         domainConstructor?.valueParameters?.forEach { parameter ->
             val name = parameter.name ?: return@forEach
-            val fieldDescriptor =
+            var fieldDescriptor =
                 fieldsWithConstructorArguments
                     .computeIfAbsent(name) { _ -> FieldDescriptor(name = name) }
-                    .run { copy() }
+                    .copy(constructorArgument = parameter)
+            parameter.protoFieldAnnotation?.let {
+                fieldDescriptor =
+                    fieldDescriptor.copy(
+                        protoFieldDescriptor =
+                            fieldDescriptor.protoFieldDescriptor?.copy(toDomainFieldAnnotation = it)
+                                ?: FieldDescriptor.ProtoFieldDescriptors(
+                                    toDomainFieldAnnotation = it
+                                )
+                    )
+            }
 
             fieldsWithConstructorArguments[name] = fieldDescriptor
         }

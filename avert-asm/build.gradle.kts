@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,10 +48,14 @@ dependencies {
     // Logging
     implementation("io.github.oshai:kotlin-logging-jvm:6.0.1")
 
+    constraints { ksp("io.arrow-kt:arrow-optics-ksp-plugin:1.2.1") }
+
     // Arrow
     implementation(platform("io.arrow-kt:arrow-stack:1.2.1"))
     implementation("io.arrow-kt:arrow-core")
     implementation("io.arrow-kt:arrow-fx-coroutines")
+    implementation("io.arrow-kt:arrow-optics")
+    ksp("io.arrow-kt:arrow-optics-ksp-plugin")
     implementation(kotlin("stdlib-jdk8"))
 
     // Dagger
