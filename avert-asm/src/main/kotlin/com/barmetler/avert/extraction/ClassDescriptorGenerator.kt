@@ -194,6 +194,7 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                     customConverter.allSupertypes.firstOrRaise({ ExtractionError.NotImplemented }) {
                         it.classifier == Converter::class
                     }
+                converterType.let {}
                 customConverter
             }
 
