@@ -17,12 +17,20 @@
 package com.barmetler.avert.extraction
 
 import arrow.core.Either
+import arrow.core.partially1
 import arrow.core.raise.either
+import arrow.optics.copy
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.annotation.ProtoField
 import com.barmetler.avert.api.Converter
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.dto.FieldDescriptor
+import com.barmetler.avert.dto.constructorArgument
+import com.barmetler.avert.dto.domainClass
+import com.barmetler.avert.dto.name
+import com.barmetler.avert.dto.protoFieldDescriptor
+import com.barmetler.avert.dto.toDomainFieldAnnotation
+import com.barmetler.avert.dto.toProtoDescriptor
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.asSubclassOf
@@ -150,8 +158,8 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                         )
                     } + syntheticJavaAccessors)
                     .filter {
-                        it.protoFieldDescriptor?.toProtoFieldAnnotation != null ||
-                            it.protoFieldDescriptor?.toDomainFieldAnnotation != null
+                        it.protoFieldDescriptor.toProtoFieldAnnotation != null ||
+                            it.protoFieldDescriptor.toDomainFieldAnnotation != null
                     }
                     .map { fieldDescriptor -> fieldDescriptor }
                     .associateBy { it.name }
@@ -184,35 +192,28 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
 
         domainConstructor?.valueParameters?.forEach { parameter ->
             val name = parameter.name ?: return@forEach
-            var fieldDescriptor =
+            fieldsWithConstructorArguments[name] =
                 fieldsWithConstructorArguments
                     .computeIfAbsent(name) { _ -> FieldDescriptor(name = name) }
                     .copy(constructorArgument = parameter)
-            parameter.protoFieldAnnotation?.let {
-                fieldDescriptor =
-                    fieldDescriptor.copy(
-                        protoFieldDescriptor =
-                            fieldDescriptor.protoFieldDescriptor?.copy(toDomainFieldAnnotation = it)
-                                ?: FieldDescriptor.ProtoFieldDescriptors(
-                                    toDomainFieldAnnotation = it
-                                )
-                    )
-            }
-
-            fieldsWithConstructorArguments[name] = fieldDescriptor
+                    .let {
+                        parameter.protoFieldAnnotation?.let(
+                            FieldDescriptor.protoFieldDescriptor.toDomainFieldAnnotation::set
+                                .partially1(it)
+                        ) ?: it
+                    }
         }
 
         logger.warn {
-            "Generating class descriptor for ${domainClass.simpleName} with ${fields?.size} fields\n" +
-                "$fields"
+            "Generating class descriptor for ${domainClass.simpleName} with ${fieldsWithConstructorArguments.size} fields\n" +
+                "$fieldsWithConstructorArguments"
         }
-
-        logger.warn { "${domainClass.simpleName} is java record: ${domainClass.java.isRecord}" }
 
         ClassDescriptor(
             domainClass = domainClass,
             protoClass = protoClass,
             domainConstructor = domainConstructor,
+            fields = fieldsWithConstructorArguments.values.toList(),
         )
     }
 
@@ -222,4 +223,15 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
     companion object {
         private val logger = KotlinLogging.logger {}
     }
+}
+
+fun main() {
+    println(
+        FieldDescriptor.protoFieldDescriptor.toProtoDescriptor.getOrNull(
+            FieldDescriptor.protoFieldDescriptor.toProtoDescriptor.set(
+                FieldDescriptor(name = "test"),
+                com.google.protobuf.Timestamp.getDescriptor().fields.first()
+            )
+        )
+    )
 }

@@ -30,7 +30,7 @@ data class FieldDescriptor(
     val getter: KFunction<*>? = null,
     val setter: KFunction<*>? = null,
     val constructorArgument: KParameter? = null,
-    val protoFieldDescriptor: ProtoFieldDescriptors? = null,
+    val protoFieldDescriptor: ProtoFieldDescriptors = ProtoFieldDescriptors(),
 ) {
     @optics
     data class ProtoFieldDescriptors(

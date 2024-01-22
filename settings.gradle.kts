@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Maximilian Barmetler <http://barmetler.com>
+ * Copyright (c) 2023-2024 Maximilian Barmetler <http://barmetler.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,4 @@ plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
 
 rootProject.name = "avert-asm-workspace"
 
-include(":avert-asm")
-
-include(":workload")
+include(":avert-asm", ":workload")
