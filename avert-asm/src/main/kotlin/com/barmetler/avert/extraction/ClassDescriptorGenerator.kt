@@ -27,8 +27,8 @@ import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.dto.FieldDescriptor
 import com.barmetler.avert.dto.protoFieldDescriptor
 import com.barmetler.avert.dto.toDomainFieldAnnotation
-import com.barmetler.avert.dto.toProtoDescriptor
 import com.barmetler.avert.errors.ExtractionError
+import com.barmetler.avert.errors.ExtractionError.InvalidProtoClass
 import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.asSubclassOf
 import com.barmetler.avert.util.findAnnotationOrRaise
@@ -70,90 +70,93 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
         val annotation = domainClass.findAnnotationOrRaise<ProtoClass>()
 
         val protoClass = annotation.protoClass
-        val protoMessage = protoClass.asSubclassOf<Message>()
-        val protoDescriptor = protoMessage?.getProtoDescriptor()
 
+        // TODO: check converter generics
         val customConverter = annotation.getCustomConverter()
+
+        if (customConverter != null) {
+            return@either ClassDescriptor(
+                domainClass = domainClass,
+                protoClass = protoClass,
+                customConverter = customConverter
+            )
+        }
+
+        val protoMessage = protoClass.asSubclassOf<Message>() ?: raise(InvalidProtoClass)
+        val protoDescriptor = protoMessage.getProtoDescriptor()
 
         val canonicalConstructor = domainClass.getCanonicalConstructor()
 
         logger.warn { "ProtoClass descriptor for $protoClass:\n$protoDescriptor" }
 
         val fields = run {
-            if (customConverter == null && protoDescriptor != null) {
-                val javaAccessors =
-                    domainClass.memberFunctions
-                        .asSequence()
-                        .map { it.javaFieldName() }
-                        .groupingBy { it.name }
-                        .fold(null as FieldDescriptor?) { accNull, field ->
-                            (accNull ?: FieldDescriptor(field.name)).let { acc ->
-                                when {
-                                    field.isSetter -> acc.copy(setter = field.function)
-                                    else -> acc.copy(getter = field.function)
-                                }
+            val javaAccessors =
+                domainClass.memberFunctions
+                    .asSequence()
+                    .map { it.javaFieldName() }
+                    .groupingBy { it.name }
+                    .fold(null as FieldDescriptor?) { accNull, field ->
+                        (accNull ?: FieldDescriptor(field.name)).let { acc ->
+                            when {
+                                field.isSetter -> acc.copy(setter = field.function)
+                                else -> acc.copy(getter = field.function)
                             }
                         }
+                    }
 
-                val propertyNames =
-                    domainClass.memberProperties.asSequence().map { it.name }.toSet()
+            val propertyNames = domainClass.memberProperties.asSequence().map { it.name }.toSet()
 
-                val syntheticJavaAccessors =
-                    javaAccessors
-                        .asSequence()
-                        .filter { (key, _) -> key !in propertyNames }
-                        .mapNotNull { (_, v) -> v }
-                        .map {
-                            it.copy(
-                                protoFieldDescriptor =
-                                    FieldDescriptor.ProtoFieldDescriptors(
-                                        toProtoFieldAnnotation = it.getter?.protoFieldAnnotation,
-                                        toDomainFieldAnnotation = it.setter?.protoFieldAnnotation,
-                                    )
-                            )
-                        }
-
-                (domainClass.memberProperties.asSequence().map { property ->
-                        val javaProperty = javaAccessors[property.name]
-                        val toProtoFieldAnnotation =
-                            javaProperty?.getter?.protoFieldAnnotation
-                                ?: property.getter.protoFieldAnnotation
-                                ?: property.protoFieldAnnotation
-                        val toDomainFieldAnnotation =
-                            javaProperty?.setter?.protoFieldAnnotation
-                                ?: property.asMutable?.setter?.protoFieldAnnotation
-                                ?: property.protoFieldAnnotation
-                        FieldDescriptor(
-                            name = property.name,
-                            field = property,
-                            getter = javaProperty?.getter ?: property.getter,
-                            setter = javaProperty?.setter ?: property.asMutable?.setter,
+            val syntheticJavaAccessors =
+                javaAccessors
+                    .asSequence()
+                    .filter { (key, _) -> key !in propertyNames }
+                    .mapNotNull { (_, v) -> v }
+                    .map {
+                        it.copy(
                             protoFieldDescriptor =
                                 FieldDescriptor.ProtoFieldDescriptors(
-                                    toProtoFieldAnnotation = toProtoFieldAnnotation,
-                                    toDomainFieldAnnotation = toDomainFieldAnnotation,
-                                ),
+                                    toProtoFieldAnnotation = it.getter?.protoFieldAnnotation,
+                                    toDomainFieldAnnotation = it.setter?.protoFieldAnnotation,
+                                )
                         )
-                    } + syntheticJavaAccessors)
-                    .filter {
-                        it.protoFieldDescriptor.toProtoFieldAnnotation != null ||
-                            it.protoFieldDescriptor.toDomainFieldAnnotation != null
                     }
-                    .map { fieldDescriptor -> fieldDescriptor }
-                    .associateBy { it.name }
-            } else {
-                null
-            }
+
+            (domainClass.memberProperties.asSequence().map { property ->
+                    val javaProperty = javaAccessors[property.name]
+                    val toProtoFieldAnnotation =
+                        javaProperty?.getter?.protoFieldAnnotation
+                            ?: property.getter.protoFieldAnnotation
+                            ?: property.protoFieldAnnotation
+                    val toDomainFieldAnnotation =
+                        javaProperty?.setter?.protoFieldAnnotation
+                            ?: property.asMutable?.setter?.protoFieldAnnotation
+                            ?: property.protoFieldAnnotation
+                    FieldDescriptor(
+                        name = property.name,
+                        field = property,
+                        getter = javaProperty?.getter ?: property.getter,
+                        setter = javaProperty?.setter ?: property.asMutable?.setter,
+                        protoFieldDescriptor =
+                            FieldDescriptor.ProtoFieldDescriptors(
+                                toProtoFieldAnnotation = toProtoFieldAnnotation,
+                                toDomainFieldAnnotation = toDomainFieldAnnotation,
+                            ),
+                    )
+                } + syntheticJavaAccessors)
+                .filter {
+                    it.protoFieldDescriptor.toProtoFieldAnnotation != null ||
+                        it.protoFieldDescriptor.toDomainFieldAnnotation != null
+                }
+                .map { fieldDescriptor -> fieldDescriptor }
+                .associateByTo(mutableMapOf()) { it.name }
         }
 
         val domainConstructor = canonicalConstructor ?: domainClass.findDomainConstructor(fields)
 
-        val fieldsWithConstructorArguments = fields?.toMutableMap() ?: mutableMapOf()
-
         domainConstructor?.valueParameters?.forEach { parameter ->
             val name = parameter.name ?: return@forEach
-            fieldsWithConstructorArguments[name] =
-                fieldsWithConstructorArguments
+            fields[name] =
+                fields
                     .computeIfAbsent(name) { _ -> FieldDescriptor(name = name) }
                     .copy(constructorArgument = parameter)
                     .let {
@@ -164,26 +167,30 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                     }
         }
 
+        fields.keys.forEach { fieldName ->
+            fields.computeIfPresent(fieldName) { fieldName, fieldDescriptor -> fieldDescriptor }
+        }
+
         logger.warn {
-            "Generating class descriptor for ${domainClass.simpleName} with ${fieldsWithConstructorArguments.size} fields\n" +
-                "$fieldsWithConstructorArguments"
+            "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields\n" +
+                "$fields"
         }
 
         ClassDescriptor(
             domainClass = domainClass,
             protoClass = protoClass,
             domainConstructor = domainConstructor,
-            fields = fieldsWithConstructorArguments.values.toList(),
+            fields = fields.values.toList(),
         )
     }
 
-    context(Raise<ExtractionError.InvalidProtoClass>)
+    context(Raise<InvalidProtoClass>)
     private fun KClass<out Message>.getProtoDescriptor() =
         staticFunctions
-            .firstOrRaise({ ExtractionError.InvalidProtoClass }) { function ->
+            .firstOrRaise({ InvalidProtoClass }) { function ->
                 function.name == "getDescriptor" && function.isEmptyCallable
             }
-            .run { call() as? Descriptors.Descriptor ?: raise(ExtractionError.InvalidProtoClass) }
+            .run { call() as? Descriptors.Descriptor ?: raise(InvalidProtoClass) }
 
     context(Raise<ExtractionError.NotImplemented>)
     private fun ProtoClass.getCustomConverter() =
@@ -197,6 +204,9 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                 converterType.let {}
                 customConverter
             }
+
+    context(Raise<ExtractionError.ProtoFieldNotFound>, Descriptors.Descriptor)
+    private fun ProtoField.getProtoFieldDescriptor(domainName: String) {}
 
     /**
      * Search for constructor that only has arguments that either:
@@ -224,15 +234,4 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
     companion object {
         private val logger = KotlinLogging.logger {}
     }
-}
-
-fun main() {
-    println(
-        FieldDescriptor.protoFieldDescriptor.toProtoDescriptor.getOrNull(
-            FieldDescriptor.protoFieldDescriptor.toProtoDescriptor.set(
-                FieldDescriptor(name = "test"),
-                com.google.protobuf.Timestamp.getDescriptor().fields.first()
-            )
-        )
-    )
 }
