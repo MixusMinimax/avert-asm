@@ -16,19 +16,53 @@
 
 package com.barmetler.avert.compile
 
+import com.barmetler.avert.api.Converter
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.strategy.ConverterNamingStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Inject
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
+import org.objectweb.asm.signature.SignatureVisitor
+import org.objectweb.asm.signature.SignatureWriter
 
 class AsmCompiler
 @Inject
 constructor(private val converterNamingStrategy: ConverterNamingStrategy) : Compiler {
 
-    fun generateConverter(descriptor: ClassDescriptor) {
-        val classWriter = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
-        classWriter.newClass(converterNamingStrategy.getConverterName(descriptor.domainClass))
+    override fun generateConverter(descriptor: ClassDescriptor) {
+        val domainClass = descriptor.domainClass
+        val protoClass = descriptor.protoClass
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
+        // extends object, implements Converter<domainClass, protoClass>
+        val sw = SignatureWriter()
+        scoped(sw) {
+            scoped(visitSuperclass()) { visitClassType(Type.getInternalName(Any::class.java)) }
+            scoped(visitInterface()) {
+                visitClassType(Type.getInternalName(Converter::class.java))
+                scoped(visitTypeArgument('=')) {
+                    visitClassType(Type.getInternalName(domainClass.java))
+                }
+                scoped(visitTypeArgument('=')) {
+                    visitClassType(Type.getInternalName(protoClass.java))
+                }
+            }
+        }
+        logger.info { "Signature: $sw" }
+        cw.visit(
+            Opcodes.V1_8,
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER,
+            converterNamingStrategy.getConverterName(domainClass),
+            sw.toString(),
+            Type.getInternalName(Any::class.java),
+            null
+        )
+    }
+
+    private inline fun scoped(sv: SignatureVisitor, block: SignatureVisitor.() -> Unit) {
+        sv.block()
+        sv.visitEnd()
     }
 
     companion object {

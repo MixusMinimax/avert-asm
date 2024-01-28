@@ -16,7 +16,9 @@
 
 package com.barmetler.avert
 
-import com.barmetler.avert.annotation.ProtoClass
+import arrow.core.Either
+import arrow.core.getOrElse
+import arrow.core.raise.either
 import com.barmetler.avert.api.Converter
 import com.barmetler.avert.api.ConverterContext
 import com.barmetler.avert.compile.CompileModule
@@ -26,11 +28,13 @@ import com.barmetler.avert.extraction.ExtractionModule
 import com.barmetler.avert.strategy.StrategyModule
 import dagger.Component
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import javax.inject.Singleton
 import kotlin.reflect.KClass
-import kotlin.reflect.full.findAnnotations
 
-class AsmConverterContext : ConverterContext {
+class AsmConverterContext : ConverterContext, AutoCloseable {
 
     @Singleton
     @Component(modules = [StrategyModule::class, ExtractionModule::class, CompileModule::class])
@@ -47,17 +51,36 @@ class AsmConverterContext : ConverterContext {
 
     private val implementation = DaggerAsmConverterContext_Implementation.create()
     private val classDescriptorGenerator = implementation.classDescriptorGenerator()
+    private val compiler = implementation.compiler()
+    private val converterCache =
+        ConcurrentHashMap<Pair<KClass<*>, KClass<*>>, Future<out Converter<*, *>>>()
+    private val executor = Executors.newCachedThreadPool()
 
     override fun <Domain : Any, Proto : Any> getConverter(
         domainClass: KClass<Domain>,
         protoClass: KClass<Proto>
     ): Converter<Domain, Proto> {
-        val annotation = domainClass.findAnnotations(ProtoClass::class).firstOrNull()
-        logger.info { annotation }
+        val key = domainClass to protoClass
+        @Suppress("UNCHECKED_CAST")
+        return converterCache
+            .getOrPut(key) {
+                executor.submit<Converter<Domain, Proto>> {
+                    createConverter(domainClass, protoClass).getOrElse {
+                        logger.error { "Failed to create converter for $key" }
+                        throw IllegalStateException(it.toString())
+                    }
+                }
+            }
+            .get() as Converter<Domain, Proto>
+    }
 
-        classDescriptorGenerator.classDescriptorOf(domainClass)
-
-        return object : Converter<Domain, Proto> {
+    private fun <Domain : Any, Proto : Any> createConverter(
+        domainClass: KClass<Domain>,
+        protoClass: KClass<Proto>,
+    ): Either<Any, Converter<Domain, Proto>> = either {
+        val classDescriptor = classDescriptorGenerator.classDescriptorOf(domainClass).bind()
+        compiler.generateConverter(classDescriptor)
+        object : Converter<Domain, Proto> {
             override fun toProto(domain: Domain, context: ConverterContext?): Proto {
                 TODO()
             }
@@ -66,6 +89,10 @@ class AsmConverterContext : ConverterContext {
                 TODO()
             }
         }
+    }
+
+    override fun close() {
+        executor.shutdown()
     }
 
     companion object {

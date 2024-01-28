@@ -16,4 +16,8 @@
 
 package com.barmetler.avert.compile
 
-interface Compiler
+import com.barmetler.avert.dto.ClassDescriptor
+
+interface Compiler {
+    fun generateConverter(descriptor: ClassDescriptor)
+}
