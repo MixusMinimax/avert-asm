@@ -167,10 +167,6 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                     }
         }
 
-        fields.keys.forEach { fieldName ->
-            fields.computeIfPresent(fieldName) { fieldName, fieldDescriptor -> fieldDescriptor }
-        }
-
         logger.warn {
             "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields\n" +
                 "$fields"

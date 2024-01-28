@@ -18,7 +18,7 @@ package com.barmetler.workload.initializer
 
 import com.barmetler.proto.person.HumanName as HumanNameMsg
 import com.barmetler.proto.user.User as UserMsg
-import com.barmetler.avert.api.AsmConverterContext
+import com.barmetler.avert.AsmConverterContext
 import com.barmetler.avert.api.ConverterContext
 import com.barmetler.avert.api.getConverter
 import com.barmetler.workload.dto.UserDto

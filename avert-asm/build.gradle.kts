@@ -45,6 +45,9 @@ dependencies {
 
     // Protobuf
     implementation("com.google.protobuf:protobuf-kotlin:3.25.1")
+
+    // Asm
+    implementation("org.ow2.asm:asm:9.6")
 }
 
 kotlin { jvmToolchain(17) }

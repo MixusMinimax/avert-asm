@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
-package com.barmetler.avert.api
+package com.barmetler.avert
 
 import com.barmetler.avert.annotation.ProtoClass
+import com.barmetler.avert.api.Converter
+import com.barmetler.avert.api.ConverterContext
+import com.barmetler.avert.compile.CompileModule
+import com.barmetler.avert.compile.Compiler
 import com.barmetler.avert.extraction.ClassDescriptorGenerator
 import com.barmetler.avert.extraction.ExtractionModule
+import com.barmetler.avert.strategy.StrategyModule
 import dagger.Component
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.inject.Singleton
@@ -28,9 +33,11 @@ import kotlin.reflect.full.findAnnotations
 class AsmConverterContext : ConverterContext {
 
     @Singleton
-    @Component(modules = [ExtractionModule::class])
+    @Component(modules = [StrategyModule::class, ExtractionModule::class, CompileModule::class])
     internal interface Implementation {
         fun classDescriptorGenerator(): ClassDescriptorGenerator
+
+        fun compiler(): Compiler
 
         @Component.Builder
         interface Builder {
