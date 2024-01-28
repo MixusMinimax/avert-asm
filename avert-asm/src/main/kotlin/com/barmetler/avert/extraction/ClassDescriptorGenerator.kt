@@ -213,16 +213,18 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
      * - a java class with AllArgsConstructor or RequiredArgsConstructor.
      */
     private fun KClass<*>.findDomainConstructor(fields: Map<String, Any?>?) =
-        constructors.firstOrNull { constructor ->
-            constructor.valueParameters.all { parameter ->
-                when {
-                    parameter.isOptional -> true
-                    fields != null && parameter.name in fields.keys -> true
-                    parameter.hasAnnotation<ProtoField>() -> true
-                    else -> false
+        constructors
+            .filter { constructor ->
+                constructor.valueParameters.all { parameter ->
+                    when {
+                        parameter.isOptional -> true
+                        fields != null && parameter.name in fields.keys -> true
+                        parameter.hasAnnotation<ProtoField>() -> true
+                        else -> false
+                    }
                 }
             }
-        }
+            .maxByOrNull { it.valueParameters.size }
 
     private val KAnnotatedElement.protoFieldAnnotation: ProtoField?
         get() = annotations.asSequence().filterIsInstance<ProtoField>().firstOrNull()
