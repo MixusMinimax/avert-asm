@@ -24,4 +24,6 @@ sealed interface ExtractionError {
     data class ProtoFieldNotFound(val name: String) : ExtractionError
 
     data object NotImplemented : ExtractionError
+
+    data class UnknownError(val message: String) : ExtractionError
 }

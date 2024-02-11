@@ -21,6 +21,7 @@ import arrow.core.partially1
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.recover
+import arrow.optics.Setter
 import arrow.optics.copy
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.annotation.ProtoField
@@ -30,6 +31,9 @@ import com.barmetler.avert.dto.FieldDescriptor
 import com.barmetler.avert.dto.protoFieldDescriptor
 import com.barmetler.avert.dto.toDomainDescriptor
 import com.barmetler.avert.dto.toDomainFieldAnnotation
+import com.barmetler.avert.dto.toDomainFieldType
+import com.barmetler.avert.dto.toProtoDescriptor
+import com.barmetler.avert.dto.toProtoFieldType
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.errors.ExtractionError.InvalidProtoClass
 import com.barmetler.avert.strategy.ProtoFieldNameComparingStrategy
@@ -91,7 +95,8 @@ constructor(protoFieldNameComparingStrategy: ProtoFieldNameComparingStrategy) :
         }
 
         val protoMessage = protoClass.asSubclassOf<Message>() ?: raise(InvalidProtoClass)
-        val protoDescriptor = protoMessage.getProtoDescriptor()
+        val protoDefaultInstance = protoMessage.getProtoDefaultInstance()
+        val protoDescriptor = protoDefaultInstance.descriptorForType
 
         val canonicalConstructor = domainClass.getCanonicalConstructor()
 
@@ -177,30 +182,38 @@ constructor(protoFieldNameComparingStrategy: ProtoFieldNameComparingStrategy) :
 
         fields.replaceAll { domainName, fieldDescriptor ->
             fieldDescriptor.copy {
-                if (fieldDescriptor.protoFieldDescriptor.toDomainFieldAnnotation != null) {
-                    recover(
-                        {
-                            FieldDescriptor.protoFieldDescriptor.toDomainDescriptor set
-                                with(protoDescriptor) {
-                                    fieldDescriptor.protoFieldDescriptor.toDomainFieldAnnotation
-                                        .getProtoFieldDescriptor(domainName)
-                                }
-                        },
-                        { logger.warn { it } }
-                    )
+                fun extractFieldType(
+                    descriptorSetter: Setter<FieldDescriptor, Descriptors.FieldDescriptor>,
+                    typeSetter: Setter<FieldDescriptor, KClass<*>>,
+                    fieldAnnotation: ProtoField?,
+                ) {
+                    if (fieldAnnotation != null) {
+                        recover(
+                            {
+                                val (protoFieldDescriptor, fieldType) =
+                                    with(protoDescriptor) {
+                                        fieldAnnotation.getProtoFieldDescriptorAndType(
+                                            domainName,
+                                            protoDefaultInstance
+                                        )
+                                    }
+                                descriptorSetter set protoFieldDescriptor
+                                typeSetter set fieldType
+                            },
+                            { logger.warn { it } }
+                        )
+                    }
                 }
-                if (fieldDescriptor.protoFieldDescriptor.toProtoFieldAnnotation != null) {
-                    recover(
-                        {
-                            FieldDescriptor.protoFieldDescriptor.toDomainDescriptor set
-                                with(protoDescriptor) {
-                                    fieldDescriptor.protoFieldDescriptor.toProtoFieldAnnotation
-                                        .getProtoFieldDescriptor(domainName)
-                                }
-                        },
-                        { logger.warn { it } }
-                    )
-                }
+                extractFieldType(
+                    FieldDescriptor.protoFieldDescriptor.toDomainDescriptor,
+                    FieldDescriptor.protoFieldDescriptor.toDomainFieldType,
+                    fieldDescriptor.protoFieldDescriptor.toDomainFieldAnnotation
+                )
+                extractFieldType(
+                    FieldDescriptor.protoFieldDescriptor.toProtoDescriptor,
+                    FieldDescriptor.protoFieldDescriptor.toProtoFieldType,
+                    fieldDescriptor.protoFieldDescriptor.toProtoFieldAnnotation
+                )
             }
         }
 
@@ -218,12 +231,12 @@ constructor(protoFieldNameComparingStrategy: ProtoFieldNameComparingStrategy) :
     }
 
     context(Raise<InvalidProtoClass>)
-    private fun KClass<out Message>.getProtoDescriptor() =
+    private fun KClass<out Message>.getProtoDefaultInstance() =
         staticFunctions
             .firstOrRaise({ InvalidProtoClass }) { function ->
-                function.name == "getDescriptor" && function.isEmptyCallable
+                function.name == "getDefaultInstance" && function.isEmptyCallable
             }
-            .run { call() as? Descriptors.Descriptor ?: raise(InvalidProtoClass) }
+            .run { call() as? Message ?: raise(InvalidProtoClass) }
 
     context(Raise<ExtractionError.NotImplemented>)
     private fun ProtoClass.getCustomConverter() =
@@ -239,12 +252,21 @@ constructor(protoFieldNameComparingStrategy: ProtoFieldNameComparingStrategy) :
             }
 
     context(Raise<ExtractionError.ProtoFieldNotFound>, Descriptors.Descriptor)
-    private fun ProtoField.getProtoFieldDescriptor(
-        domainName: String
-    ): Descriptors.FieldDescriptor {
+    private fun ProtoField.getProtoFieldDescriptorAndType(
+        domainName: String,
+        protoDefaultInstance: Message,
+    ): Pair<Descriptors.FieldDescriptor, KClass<*>> {
         val protoFieldName = name.ifEmpty { domainName }
-        return fields.find { protoFieldNameEquals(protoFieldName, it.name) }
-            ?: raise(ExtractionError.ProtoFieldNotFound(protoFieldName))
+        val field =
+            fields.find { protoFieldNameEquals(protoFieldName, it.name) }
+                ?: raise(ExtractionError.ProtoFieldNotFound(protoFieldName))
+        // todo: this does not work for collections. requires more complex logic.
+        //       - we need the collection type for both the domain and the proto field
+        //         (list, set, map, etc.)
+        //       - we need the entry type for lists, and for maps the key and value types.
+        //       - we need to know how to construct these collections.
+        val fieldClass = protoDefaultInstance.getField(field)::class
+        return field to fieldClass
     }
 
     /**

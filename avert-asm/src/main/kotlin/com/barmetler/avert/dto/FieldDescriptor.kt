@@ -19,6 +19,7 @@ package com.barmetler.avert.dto
 import arrow.optics.optics
 import com.barmetler.avert.annotation.ProtoField
 import com.google.protobuf.Descriptors
+import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.KProperty
@@ -36,8 +37,10 @@ data class FieldDescriptor(
     data class ProtoFieldDescriptors(
         val toProtoFieldAnnotation: ProtoField? = null,
         val toProtoDescriptor: Descriptors.FieldDescriptor? = null,
+        val toProtoFieldType: KClass<*>? = null,
         val toDomainFieldAnnotation: ProtoField? = null,
         val toDomainDescriptor: Descriptors.FieldDescriptor? = null,
+        val toDomainFieldType: KClass<*>? = null,
     ) {
         companion object
     }
