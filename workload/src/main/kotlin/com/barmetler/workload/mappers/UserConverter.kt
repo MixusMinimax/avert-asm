@@ -26,9 +26,9 @@ import java.util.*
 
 class UserConverter : Converter<User, UserMsg> {
 
-    @Volatile private var uuidConverter: Converter<UUID, String>? = null
+    @Volatile private lateinit var uuidConverter: Converter<UUID, String>
     @Volatile
-    private var personalDetailsConverter: Converter<PersonalDetails, PersonalDetailsMsg>? = null
+    private lateinit var personalDetailsConverter: Converter<PersonalDetails, PersonalDetailsMsg>
 
     override fun toProto(domain: User?, context: ConverterContext): UserMsg? {
         if (domain == null) {
@@ -38,10 +38,10 @@ class UserConverter : Converter<User, UserMsg> {
         // it is fine that this operation is not atomic, as the getConverter function is.
         // This might make things a bit slower at startup, but as soon as humanNameConverter is set,
         // future calls will be faster.
-        if (uuidConverter == null) {
+        if (!::uuidConverter.isInitialized) {
             uuidConverter = context.getConverter(UUID::class, String::class)
         }
-        if (personalDetailsConverter == null) {
+        if (!::personalDetailsConverter.isInitialized) {
             personalDetailsConverter =
                 context.getConverter(PersonalDetails::class, PersonalDetailsMsg::class)
         }
@@ -50,7 +50,7 @@ class UserConverter : Converter<User, UserMsg> {
 
         val domainId = domain.id
         if (domainId != null) {
-            resultBuilder.id = uuidConverter?.toProto(domainId, context) ?: ""
+            resultBuilder.id = uuidConverter.toProto(domainId, context) ?: ""
         }
 
         val domainEmail = domain.email
@@ -66,7 +66,7 @@ class UserConverter : Converter<User, UserMsg> {
         val domainPersonalDetails = domain.personalDetails
         if (domainPersonalDetails != null) {
             val personalDetailsMsg =
-                personalDetailsConverter?.toProto(domainPersonalDetails, context)
+                personalDetailsConverter.toProto(domainPersonalDetails, context)
             if (personalDetailsMsg != null) {
                 resultBuilder.personalDetails = personalDetailsMsg
             }
