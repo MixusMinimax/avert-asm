@@ -20,15 +20,19 @@ import arrow.core.Either
 import arrow.core.partially1
 import arrow.core.raise.Raise
 import arrow.core.raise.either
+import arrow.core.raise.recover
+import arrow.optics.copy
 import com.barmetler.avert.annotation.ProtoClass
 import com.barmetler.avert.annotation.ProtoField
 import com.barmetler.avert.api.Converter
 import com.barmetler.avert.dto.ClassDescriptor
 import com.barmetler.avert.dto.FieldDescriptor
 import com.barmetler.avert.dto.protoFieldDescriptor
+import com.barmetler.avert.dto.toDomainDescriptor
 import com.barmetler.avert.dto.toDomainFieldAnnotation
 import com.barmetler.avert.errors.ExtractionError
 import com.barmetler.avert.errors.ExtractionError.InvalidProtoClass
+import com.barmetler.avert.strategy.ProtoFieldNameComparingStrategy
 import com.barmetler.avert.util.asMutable
 import com.barmetler.avert.util.asSubclassOf
 import com.barmetler.avert.util.findAnnotationOrRaise
@@ -55,7 +59,10 @@ interface ClassDescriptorGenerator {
     ): Either<ExtractionError, ClassDescriptor>
 }
 
-class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenerator {
+class ClassDescriptorGeneratorImpl
+@Inject
+constructor(protoFieldNameComparingStrategy: ProtoFieldNameComparingStrategy) :
+    ClassDescriptorGenerator, ProtoFieldNameComparingStrategy by protoFieldNameComparingStrategy {
     private val classDescriptors = mutableMapOf<KClass<*>, ClassDescriptor>()
 
     override fun classDescriptorOf(
@@ -167,6 +174,35 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
                     }
         }
 
+        fields.replaceAll { domainName, fieldDescriptor ->
+            fieldDescriptor.copy {
+                if (fieldDescriptor.protoFieldDescriptor.toDomainFieldAnnotation != null) {
+                    recover(
+                        {
+                            FieldDescriptor.protoFieldDescriptor.toDomainDescriptor set
+                                with(protoDescriptor) {
+                                    fieldDescriptor.protoFieldDescriptor.toDomainFieldAnnotation
+                                        .getProtoFieldDescriptor(domainName)
+                                }
+                        },
+                        { logger.warn { it } }
+                    )
+                }
+                if (fieldDescriptor.protoFieldDescriptor.toProtoFieldAnnotation != null) {
+                    recover(
+                        {
+                            FieldDescriptor.protoFieldDescriptor.toDomainDescriptor set
+                                with(protoDescriptor) {
+                                    fieldDescriptor.protoFieldDescriptor.toProtoFieldAnnotation
+                                        .getProtoFieldDescriptor(domainName)
+                                }
+                        },
+                        { logger.warn { it } }
+                    )
+                }
+            }
+        }
+
         logger.warn {
             "Generating class descriptor for ${domainClass.simpleName} with ${fields.size} fields\n" +
                 "$fields"
@@ -202,7 +238,13 @@ class ClassDescriptorGeneratorImpl @Inject constructor() : ClassDescriptorGenera
             }
 
     context(Raise<ExtractionError.ProtoFieldNotFound>, Descriptors.Descriptor)
-    private fun ProtoField.getProtoFieldDescriptor(domainName: String) {}
+    private fun ProtoField.getProtoFieldDescriptor(
+        domainName: String
+    ): Descriptors.FieldDescriptor {
+        val protoFieldName = name.ifEmpty { domainName }
+        return fields.find { protoFieldNameEquals(protoFieldName, it.name) }
+            ?: raise(ExtractionError.ProtoFieldNotFound(protoFieldName))
+    }
 
     /**
      * Search for constructor that only has arguments that either:

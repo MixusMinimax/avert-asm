@@ -19,5 +19,11 @@ package com.barmetler.avert.strategy
 import kotlin.reflect.KClass
 
 interface ConverterNamingStrategy {
+    /**
+     * Returns the name of the converter for the given domain class.
+     *
+     * @param domainClass the domain class to get the converter name for.
+     * @return the name of the converter for the given domain class.
+     */
     fun getConverterName(domainClass: KClass<*>): String?
 }

@@ -25,4 +25,8 @@ interface StrategyModule {
     @Binds
     @Singleton
     fun bindConverterNamingStrategy(impl: DefaultStrategy): ConverterNamingStrategy
+
+    @Binds
+    @Singleton
+    fun bindProtoFieldNameComparingStrategy(impl: DefaultStrategy): ProtoFieldNameComparingStrategy
 }

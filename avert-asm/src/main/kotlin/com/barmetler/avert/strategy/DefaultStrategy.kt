@@ -16,12 +16,14 @@
 
 package com.barmetler.avert.strategy
 
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass
 
 @Singleton
-class DefaultStrategy @Inject constructor() : ConverterNamingStrategy {
+class DefaultStrategy @Inject constructor() :
+    ConverterNamingStrategy, ProtoFieldNameComparingStrategy {
     override fun getConverterName(domainClass: KClass<*>): String? {
         return domainClass.qualifiedName?.let { qualifiedName ->
             val match = DOMAIN_CLASS_REGEX.matchEntire(qualifiedName)
@@ -34,7 +36,18 @@ class DefaultStrategy @Inject constructor() : ConverterNamingStrategy {
         }
     }
 
+    override fun protoFieldNameEquals(
+        suppliedProtoFieldName: String,
+        actualProtoFieldName: String
+    ): Boolean =
+        suppliedProtoFieldName.uniqueProtoFieldName() == actualProtoFieldName.uniqueProtoFieldName()
+
+    private fun String.uniqueProtoFieldName(): String {
+        return lowercase(Locale.getDefault()).replace(PROTO_FIELD_IGNORED_CHARS, "")
+    }
+
     companion object {
         private val DOMAIN_CLASS_REGEX = Regex("^((?:[^.]+\\.)*)([^.]*)$")
+        private val PROTO_FIELD_IGNORED_CHARS = Regex("_")
     }
 }
