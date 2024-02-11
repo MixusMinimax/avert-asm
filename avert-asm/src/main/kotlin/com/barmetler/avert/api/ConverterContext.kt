@@ -18,12 +18,18 @@ package com.barmetler.avert.api
 
 import kotlin.reflect.KClass
 
+@Suppress("unused")
 interface ConverterContext {
     /** get or create the converter for this specific pair of types. */
     fun <Domain : Any, Proto : Any> getConverter(
         domainClass: KClass<Domain>,
         protoClass: KClass<Proto>
     ): Converter<Domain, Proto>
+
+    fun <Domain : Any, Proto : Any> getConverter(
+        domainClass: Class<Domain>,
+        protoClass: Class<Proto>
+    ): Converter<Domain, Proto> = getConverter(domainClass.kotlin, protoClass.kotlin)
 
     fun <Domain : Any, Proto : Any> toProto(
         domainClass: KClass<Domain>,

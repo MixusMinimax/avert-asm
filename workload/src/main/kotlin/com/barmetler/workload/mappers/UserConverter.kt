@@ -48,9 +48,9 @@ class UserConverter : Converter<User, UserMsg> {
 
         val resultBuilder = UserMsg.newBuilder()
 
-        val domainId = domain.id
-        if (domainId != null) {
-            resultBuilder.id = uuidConverter.toProto(domainId, context) ?: ""
+        val idMsg = uuidConverter.toProto(domain.id, context)
+        if (idMsg != null) {
+            resultBuilder.id = idMsg
         }
 
         val domainEmail = domain.email
@@ -63,13 +63,9 @@ class UserConverter : Converter<User, UserMsg> {
             resultBuilder.passwordHash = domainPasswordHash
         }
 
-        val domainPersonalDetails = domain.personalDetails
-        if (domainPersonalDetails != null) {
-            val personalDetailsMsg =
-                personalDetailsConverter.toProto(domainPersonalDetails, context)
-            if (personalDetailsMsg != null) {
-                resultBuilder.personalDetails = personalDetailsMsg
-            }
+        val personalDetailsMsg = personalDetailsConverter.toProto(domain.personalDetails, context)
+        if (personalDetailsMsg != null) {
+            resultBuilder.personalDetails = personalDetailsMsg
         }
 
         return resultBuilder.build()
