@@ -81,11 +81,11 @@ class AsmConverterContext : ConverterContext, AutoCloseable {
         val classDescriptor = classDescriptorGenerator.classDescriptorOf(domainClass).bind()
         compiler.generateConverter(classDescriptor)
         object : Converter<Domain, Proto> {
-            override fun toProto(domain: Domain, context: ConverterContext?): Proto {
+            override fun toProto(domain: Domain?, context: ConverterContext): Proto? {
                 TODO()
             }
 
-            override fun toDomain(proto: Proto, context: ConverterContext?): Domain {
+            override fun toDomain(proto: Proto?, context: ConverterContext): Domain? {
                 TODO()
             }
         }
