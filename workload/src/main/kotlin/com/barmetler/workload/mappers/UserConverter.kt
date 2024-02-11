@@ -30,38 +30,52 @@ class UserConverter : Converter<User, UserMsg> {
     @Volatile
     private var personalDetailsConverter: Converter<PersonalDetails, PersonalDetailsMsg>? = null
 
-    override fun toProto(domain: User, context: ConverterContext?): UserMsg {
+    override fun toProto(domain: User?, context: ConverterContext): UserMsg? {
+        if (domain == null) {
+            return null
+        }
+
         // it is fine that this operation is not atomic, as the getConverter function is.
         // This might make things a bit slower at startup, but as soon as humanNameConverter is set,
         // future calls will be faster.
         if (uuidConverter == null) {
-            uuidConverter = context?.getConverter(UUID::class, String::class)
+            uuidConverter = context.getConverter(UUID::class, String::class)
         }
         if (personalDetailsConverter == null) {
             personalDetailsConverter =
-                context?.getConverter(PersonalDetails::class, PersonalDetailsMsg::class)
+                context.getConverter(PersonalDetails::class, PersonalDetailsMsg::class)
         }
 
         val resultBuilder = UserMsg.newBuilder()
 
-        if (domain.id != null) {
-            resultBuilder.id = uuidConverter?.toProto(domain.id!!, context) ?: ""
+        val domainId = domain.id
+        if (domainId != null) {
+            resultBuilder.id = uuidConverter?.toProto(domainId, context) ?: ""
         }
-        if (domain.email != null) {
-            resultBuilder.email = domain.email
+
+        val domainEmail = domain.email
+        if (domainEmail != null) {
+            resultBuilder.email = domainEmail
         }
-        if (domain.passwordHash != null) {
-            resultBuilder.passwordHash = domain.passwordHash
+
+        val domainPasswordHash = domain.passwordHash
+        if (domainPasswordHash != null) {
+            resultBuilder.passwordHash = domainPasswordHash
         }
-        if (domain.personalDetails != null) {
-            resultBuilder.personalDetails =
-                personalDetailsConverter?.toProto(domain.personalDetails, context)
+
+        val domainPersonalDetails = domain.personalDetails
+        if (domainPersonalDetails != null) {
+            val personalDetailsMsg =
+                personalDetailsConverter?.toProto(domainPersonalDetails, context)
+            if (personalDetailsMsg != null) {
+                resultBuilder.personalDetails = personalDetailsMsg
+            }
         }
 
         return resultBuilder.build()
     }
 
-    override fun toDomain(proto: UserMsg, context: ConverterContext?): User {
+    override fun toDomain(proto: UserMsg?, context: ConverterContext): User? {
         TODO("Not yet implemented")
     }
 }
