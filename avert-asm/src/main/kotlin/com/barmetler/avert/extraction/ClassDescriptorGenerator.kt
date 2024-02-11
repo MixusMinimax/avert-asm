@@ -43,6 +43,7 @@ import com.barmetler.avert.util.javaFieldName
 import com.google.protobuf.Descriptors
 import com.google.protobuf.Message
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
@@ -63,7 +64,7 @@ class ClassDescriptorGeneratorImpl
 @Inject
 constructor(protoFieldNameComparingStrategy: ProtoFieldNameComparingStrategy) :
     ClassDescriptorGenerator, ProtoFieldNameComparingStrategy by protoFieldNameComparingStrategy {
-    private val classDescriptors = mutableMapOf<KClass<*>, ClassDescriptor>()
+    private val classDescriptors = ConcurrentHashMap<KClass<*>, ClassDescriptor>()
 
     override fun classDescriptorOf(
         domainClass: KClass<*>,
